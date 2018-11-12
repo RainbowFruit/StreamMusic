@@ -2,6 +2,8 @@ import javax.sound.sampled.*;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class SenderTCP {
@@ -47,16 +49,27 @@ public class SenderTCP {
 
     public static void main(String[] args) {
 
-        DataOutputStream out;
-        try {
-            ServerSocket socket = new ServerSocket(50005);
-            System.out.println("Server started at port: 50005");
-            Socket connectionSocket = socket.accept();
-            out = new DataOutputStream(new BufferedOutputStream(connectionSocket.getOutputStream()));
-        } catch (IOException e){
-                e.printStackTrace();
-                return;
-        }
+
+        List<DataOutputStream> outputStreamList = new ArrayList<>();
+
+        new Thread(() -> {
+            while(true){
+                try {
+                    ServerSocket socket = new ServerSocket(50005);
+                    System.out.println("Server started at port: 50005");
+                    while(true) {
+                        Socket connectionSocket = socket.accept();
+                        System.out.println("Accepted connection from " + connectionSocket.getInetAddress());
+                        outputStreamList.add(new DataOutputStream(new BufferedOutputStream(connectionSocket.getOutputStream())));
+                    }
+                } catch (IOException e){
+                    e.printStackTrace();
+                    return;
+            }
+        }}).start();
+
+        //DataOutputStream out;
+
 
         int SIZE = 312;
         byte[] temp = new byte[SIZE];
@@ -67,7 +80,9 @@ public class SenderTCP {
             temp[i % SIZE] = sound[i];
             if (i % SIZE == 0) {
                 try {
-                    out.write(temp, 0, SIZE);
+                    for (DataOutputStream out : outputStreamList) {
+                        out.write(temp, 0, SIZE);
+                    }
                     totalSendBytes += temp.length;
                     TimeUnit.MILLISECONDS.sleep(1);
                 } catch (Exception e) {
