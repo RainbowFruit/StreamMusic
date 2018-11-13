@@ -15,6 +15,8 @@ public class ReceiverTCP {
         String host = "192.168.0.104";
 
         while(true) {
+            /////////////////////////////
+            //Main loop
             boolean connected = false;
             while (!connected) { //Connect until succeeded
                 try {
@@ -47,7 +49,7 @@ public class ReceiverTCP {
                 try {
                     while ((receivedBytes = inFromClient.read(buffer)) > 0) {
 
-                        ////
+                        //// Debug info
                         endTime = System.nanoTime();
                         totalReceivedBytes += receivedBytes;
                         totalReceivedPackets++;
@@ -65,6 +67,8 @@ public class ReceiverTCP {
             }
             sourceDataLine.drain();
             sourceDataLine.close();
+        ///////////////////////////
+        ///////////////////////////
         }
     }
 

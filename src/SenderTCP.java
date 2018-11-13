@@ -48,8 +48,6 @@ public class SenderTCP {
     }
 
     public static void main(String[] args) {
-
-
         List<DataOutputStream> outputStreamList = new ArrayList<>();
 
         new Thread(() -> {
@@ -68,9 +66,6 @@ public class SenderTCP {
             }
         }}).start();
 
-        //DataOutputStream out;
-
-
         int SIZE = 312;
         byte[] temp = new byte[SIZE];
         int totalSendBytes = 0;
@@ -81,7 +76,12 @@ public class SenderTCP {
             if (i % SIZE == 0) {
                 try {
                     for (DataOutputStream out : outputStreamList) {
-                        out.write(temp, 0, SIZE);
+                        try {
+                            out.write(temp, 0, SIZE);
+                        } catch (Exception e) {
+                            System.out.println("Unable to write to " + out);
+                            outputStreamList.remove(out);
+                        }
                     }
                     totalSendBytes += temp.length;
                     TimeUnit.MILLISECONDS.sleep(1);
