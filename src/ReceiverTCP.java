@@ -39,7 +39,9 @@ public class ReceiverTCP {
             DataOutputStream outToClient = new DataOutputStream(socket.getOutputStream());
 
             int receivedBytes; //Amount of bytes in packet
-            byte[] buffer = new byte[312]; //Received music bytes from server
+            int sizeOfMusicData = 312;
+            byte[] buffer = new byte[sizeOfMusicData + 1]; //Received music bytes from server
+            byte[] musicBuffer = new byte[sizeOfMusicData];
             int totalReceivedBytes = 0;
             double totalReceivedPackets = 0;
 
@@ -56,9 +58,11 @@ public class ReceiverTCP {
                         System.out.println("Total length: " + totalReceivedBytes);
                         System.out.println("Total Received Packets: " + totalReceivedPackets);
                         System.out.println("Elapsed time: " + (endTime - startTime) / 1000000000.0f);
+                        System.out.println("Answer: " + buffer[312]);
                         ////
 
-                        toSpeaker(buffer, sourceDataLine);
+                        System.arraycopy(buffer, 0, musicBuffer, 0, 312);
+                        toSpeaker(musicBuffer, sourceDataLine);
                     }
                 } catch (Exception e){
                     e.printStackTrace();

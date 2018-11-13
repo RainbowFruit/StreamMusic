@@ -66,18 +66,21 @@ public class SenderTCP {
             }
         }}).start();
 
-        int SIZE = 312;
-        byte[] temp = new byte[SIZE];
+        int sizeOfMusicData = 312;
+        int sizeOfBuffer = sizeOfMusicData + 1; //Byte for command
+        byte answer = -128;
+        byte[] temp = new byte[sizeOfBuffer];
         int totalSendBytes = 0;
         byte[] sound = musictoArray("1.wav");
 
         for (int i = 0; i < sound.length; i++) {
-            temp[i % SIZE] = sound[i];
-            if (i % SIZE == 0) {
+            temp[i % sizeOfMusicData] = sound[i];
+            if (i % sizeOfMusicData == sizeOfMusicData - 1) {
+                temp[312] = answer++;
                 try {
                     for (DataOutputStream out : outputStreamList) {
                         try {
-                            out.write(temp, 0, SIZE);
+                            out.write(temp, 0, sizeOfBuffer);
                         } catch (Exception e) {
                             System.out.println("Unable to write to " + out);
                             outputStreamList.remove(out);
