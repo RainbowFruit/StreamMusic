@@ -5,6 +5,7 @@ import javax.sound.sampled.SourceDataLine;
 import java.io.BufferedInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
+import java.util.Scanner;
 
 public class ReceiverTCP {
 
@@ -14,14 +15,22 @@ public class ReceiverTCP {
         int port = 50005; //Port of connection
         String host = "192.168.0.104";
 
+        Thread getCommandThread = null;
+
         while(true) {
             /////////////////////////////
             //Main loop
+            if(getCommandThread.isAlive()){
+                getCommandThread.interrupt();
+            }
+
             boolean connected = false;
             while (!connected) { //Connect until succeeded
                 try {
                     socket = new Socket(host, port);
                     connected = true;
+                    getCommandThread = new GetCommandThread(socket);
+                    getCommandThread.start();
                 } catch (Exception e) {
                     System.out.println("Unable to connect to server");
                 }
