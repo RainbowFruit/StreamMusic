@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <error.h>
 #include <iostream>
+#include <pthread.h>
+#include <vector>
 
 #define byte unsigned char
 using namespace std;
@@ -31,44 +33,161 @@ typedef struct  WAV_HEADER
     uint32_t        Subchunk2Size;  // Sampled data length
 } wav_hdr;
 
+struct arg_struct {
+    int servSock;
+    vector<int>* clientSockets;
+};
+	
+
 void MusicToBytes(int sock);
+void *thread_MusicToBytes(void* args);
+void *thread_ReceiveConnections(void* arguments);
+void *thread_ListenAtClients(void* arguments);
+void receiveFile(int clientSocket);
 
 int main(int argc, char ** argv){
 
     if(argc!=2)
         error(1,0,"Usage: %s <port>", argv[0]);
-    
+
     sockaddr_in localAddress{
         .sin_family = AF_INET,
         .sin_port   = htons(atoi(argv[1])),
         .sin_addr   = {htonl(INADDR_ANY)}
     };
-    
+
     int servSock = socket(PF_INET, SOCK_STREAM, 0);
     setsockopt(servSock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-    
-    if(bind(servSock, (sockaddr*) &localAddress, sizeof(localAddress)))
+
+    if(bind(servSock, (sockaddr*) &localAddress, sizeof(localAddress))) {
         error(1,errno,"Bind failed!");
+    } 
+
     
-    listen(servSock, 1);
 
-	int sock = 0;
-    sock = accept(servSock, nullptr, nullptr);
 
-	MusicToBytes(sock);
+	vector<int> clientSockets;
+	struct arg_struct arguments;
+	arguments.servSock = servSock;
+	arguments.clientSockets = &clientSockets;
+	
+	//Thread n1
+	pthread_t receiver;
+	pthread_create (&receiver, NULL, &thread_ReceiveConnections, (void*)&arguments);
+	
+	//Thread n2
+	pthread_t MusicSendingThread;
+	pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, &clientSockets);
+	
+	//Thread n3, listen for commands
+	pthread_t ListenAtClientsThread;
+	pthread_create (&ListenAtClientsThread, NULL, &thread_ListenAtClients, (void*)&arguments);
+	
+	pthread_join(receiver, NULL);
+	pthread_join(MusicSendingThread, NULL);
+	
 }
 
-void MusicToBytes(int sock){
-	wav_hdr wavHeader;
+
+void *thread_ListenAtClients(void* arguments){
+	struct arg_struct *args = (struct arg_struct *)arguments;
+    vector<int>* clientSockets = args -> clientSockets;
+    static const uint16_t BUFFER_SIZE = 312;
+    int8_t* buffer = new int8_t[BUFFER_SIZE + 1];
+    int bytesRead = 0;
+    
+    while(true){
+    	for(unsigned int i = 0; i < (*clientSockets).size(); i++){
+    		if((bytesRead = read((*clientSockets)[i], buffer, BUFFER_SIZE + 1)) > 0){
+    			cout << "Received command number: " << (int)*(buffer + 312) << endl;
+    			//Read 100
+				if((int)*(buffer + 312) == 100){
+					//receiveFile((*clientSockets)[i]);
+				}
+    		}
+    	}
+    }
+}
+
+/*void receiveFile(int clientSocket){
+	static const uint16_t BUFFER_SIZE = 312;
+    int8_t* packetBuffer = new int8_t[BUFFER_SIZE + 1];
+    int bytesRead = 0;
+    int receiving = 1;
+    unsigned int fileSize = 0;
+    int8_t* musicBuffer = NULL;
+    int offset = 0;
+    
+    while(receiving) {
+		if((bytesRead = read(clientSocket, packetBuffer, BUFFER_SIZE + 1)) > 0){
+			//Read 110
+			if((int)*(packetBuffer + 312) == 110){
+				cout << "Received music name: ";
+				for(int i = 0; i < BUFFER_SIZE; i++){
+					cout << (char)*(packetBuffer + i);
+				}
+				cout << endl;
+			  //Read 111
+			} else if((int)*(packetBuffer + 312) == 111){
+				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer);
+				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer + 1);	
+				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer + 2);
+				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer + 3);
+				cout << "Received music size " << fileSize << endl;
+				musicBuffer = new int8_t[fileSize];
+			} else if((int)*(packetBuffer + 312) == 115){
+				cout << "Receiving music bytes..." << endl;
+				for(int i = 0; i < BUFFER_SIZE; i++){
+					*(musicBuffer + offset++) = *(packetBuffer + i);
+				}
+			} else if((int)*(packetBuffer + 312) == 119){
+				cout << "Finished receiving data, received bytes: " << offset - 1 << endl;
+				receiving = 0;
+			}
+		}
+    }
+}*/
+
+void *thread_ReceiveConnections(void* arguments){
+    struct arg_struct *args = (struct arg_struct *)arguments;
+    vector<int>* clientSockets = args -> clientSockets;
+    int servSock = args -> servSock;
+    int sock = 0;
+
+	listen(servSock, 1);
+	cout << "Server started" << endl;
+	while(true){
+        sock = accept(servSock, nullptr, nullptr);
+        if(sock == -1){
+            perror("Accept error");
+        } else {
+            (*clientSockets).push_back(sock);
+            cout << "Accepted connection" << endl;
+        }
+    }
+    
+    pthread_exit(NULL);
+    return NULL;
+}
+
+
+
+
+
+
+void *thread_MusicToBytes(void* args){
+
+    vector<int>* clientSockets = static_cast<vector<int>*>(args);
+
+	int bytesWrote;
+    wav_hdr wavHeader;
     int headerSize = sizeof(wav_hdr);
-
     const char* filePath = "1.wav";
-
     FILE* wavFile = fopen(filePath, "r");
     if (wavFile == nullptr)
     {
         fprintf(stderr, "Unable to open wave file: %s\n", filePath);
-        return;
+        return 0;
     }
 
     //Read the header
@@ -77,17 +196,29 @@ void MusicToBytes(int sock){
     if (bytesRead > 0)
     {
         static const uint16_t BUFFER_SIZE = 312;
-        int8_t* buffer = new int8_t[BUFFER_SIZE];
+        int8_t* buffer = new int8_t[BUFFER_SIZE + 1];
         while ((bytesRead = fread(buffer, sizeof buffer[0], BUFFER_SIZE / (sizeof buffer[0]), wavFile)) > 0)
         {
-            write(sock, buffer, bytesRead);
+        	buffer[312] = -128;
+            for(unsigned int i = 0; i < clientSockets->size(); i++){
+		            if((bytesWrote = write((*clientSockets)[i], buffer, bytesRead + 1)) < 0){
+		            	perror("Write error");
+		            	if(errno == ECONNRESET){
+		            		cout << "Deleting socket" << endl;
+		            		(*clientSockets).erase((*clientSockets).begin() + i);
+		            	}
+		            }
+            }
 			usleep(1635);
-            cout << "Sent " << bytesRead << " bytes." << endl;
+            //cout << "Sent " << bytesRead << " bytes." << endl;
         }
         delete [] buffer;
         buffer = nullptr;
 
     }
     fclose(wavFile);
+    
+    pthread_exit(NULL);
+    return NULL;
 }
 

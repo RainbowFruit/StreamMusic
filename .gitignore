@@ -1,6 +1,8 @@
 .idea
 production/
 *iml
+*.class
 *.wav
 out/artifacts/StreamMusic_jar/StreamMusic.jar
 src/META-INF/MANIFEST.MF
+old*

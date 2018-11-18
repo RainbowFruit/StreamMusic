@@ -13,14 +13,14 @@ public class ReceiverTCP {
     {
         Socket socket = null; //Socket for connection
         int port = 50005; //Port of connection
-        String host = "192.168.0.104";
+        String host = "127.0.0.1";
 
         Thread getCommandThread = null;
 
         while(true) {
             /////////////////////////////
             //Main loop
-            if(getCommandThread.isAlive()){
+            if(getCommandThread != null && getCommandThread.isAlive()){
                 getCommandThread.interrupt();
             }
 
@@ -60,7 +60,7 @@ public class ReceiverTCP {
                 try {
                     while ((receivedBytes = inFromClient.read(buffer)) > 0) {
 
-                        //// Debug info
+                        /*/// Debug info
                         endTime = System.nanoTime();
                         totalReceivedBytes += receivedBytes;
                         totalReceivedPackets++;
@@ -68,9 +68,9 @@ public class ReceiverTCP {
                         System.out.println("Total Received Packets: " + totalReceivedPackets);
                         System.out.println("Elapsed time: " + (endTime - startTime) / 1000000000.0f);
                         System.out.println("Answer: " + buffer[312]);
-                        ////
+                        ///*/
 
-                        System.arraycopy(buffer, 0, musicBuffer, 0, 312);
+                        System.arraycopy(buffer, 0, musicBuffer, 0, sizeOfMusicData);
                         toSpeaker(musicBuffer, sourceDataLine);
                     }
                 } catch (Exception e){

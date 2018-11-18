@@ -6,7 +6,8 @@ import java.util.List;
 public class ListenAtClientsThread extends Thread {
 
     private List<Socket> clientSockets = null;
-    private byte[] buffer = new byte[1];
+    int sizeOfMusicData = 312;
+    private byte[] buffer = new byte[sizeOfMusicData + 1];
 
     ListenAtClientsThread(List<Socket> list){
         this.clientSockets = list;
@@ -20,7 +21,7 @@ public class ListenAtClientsThread extends Thread {
             for (Socket socket : clientSockets) {
                 try {
                     if(socket.getInputStream().read(buffer) > 0){
-                        System.out.println("Received command number: " + buffer[0]);
+                        System.out.println("Received command number: " + buffer[sizeOfMusicData]);
                         //TODO: Handle commands
                     }
                 } catch (IOException e) {
