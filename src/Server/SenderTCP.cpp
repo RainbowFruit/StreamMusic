@@ -37,7 +37,7 @@ struct arg_struct {
     int servSock;
     vector<int>* clientSockets;
 };
-	
+
 
 void MusicToBytes(int sock);
 void *thread_MusicToBytes(void* args);
@@ -61,31 +61,50 @@ int main(int argc, char ** argv){
 
     if(bind(servSock, (sockaddr*) &localAddress, sizeof(localAddress))) {
         error(1,errno,"Bind failed!");
-    } 
+    }
 
-    
+
 
 
 	vector<int> clientSockets;
 	struct arg_struct arguments;
 	arguments.servSock = servSock;
 	arguments.clientSockets = &clientSockets;
-	
+
 	//Thread n1
 	pthread_t receiver;
 	pthread_create (&receiver, NULL, &thread_ReceiveConnections, (void*)&arguments);
-	
+
 	//Thread n2
 	pthread_t MusicSendingThread;
 	pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, &clientSockets);
-	
+
 	//Thread n3, listen for commands
-	pthread_t ListenAtClientsThread;
+	/*pthread_t ListenAtClientsThread;
 	pthread_create (&ListenAtClientsThread, NULL, &thread_ListenAtClients, (void*)&arguments);
-	
+
 	pthread_join(receiver, NULL);
-	pthread_join(MusicSendingThread, NULL);
-	
+	pthread_join(MusicSendingThread, NULL);*/
+
+	static const uint16_t BUFFER_SIZE = 312;
+    int8_t* buffer = new int8_t[BUFFER_SIZE + 1];
+    int bytesRead = 0;
+
+    while(true){
+    	for(unsigned int i = 0; i < (*clientSockets).size(); i++){
+    		if((bytesRead = read((*clientSockets)[i], buffer, BUFFER_SIZE + 1)) > 0){
+    			cout << "Received command number: " << (int)*(buffer + 312) << endl;
+    			//Read 100
+				if((int)*(buffer + 312) == 100){
+					//receiveFile((*clientSockets)[i]);
+				} else if((int)*(buffer + 312) == 10){
+					pthread_kill(MusicSendingThread, 9);
+					pthread_join(MusicSendingThread, NULL);
+					pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, &clientSockets);
+				}
+    		}
+    	}
+    }
 }
 
 
@@ -95,7 +114,7 @@ void *thread_ListenAtClients(void* arguments){
     static const uint16_t BUFFER_SIZE = 312;
     int8_t* buffer = new int8_t[BUFFER_SIZE + 1];
     int bytesRead = 0;
-    
+
     while(true){
     	for(unsigned int i = 0; i < (*clientSockets).size(); i++){
     		if((bytesRead = read((*clientSockets)[i], buffer, BUFFER_SIZE + 1)) > 0){
@@ -117,7 +136,7 @@ void *thread_ListenAtClients(void* arguments){
     unsigned int fileSize = 0;
     int8_t* musicBuffer = NULL;
     int offset = 0;
-    
+
     while(receiving) {
 		if((bytesRead = read(clientSocket, packetBuffer, BUFFER_SIZE + 1)) > 0){
 			//Read 110
@@ -130,7 +149,7 @@ void *thread_ListenAtClients(void* arguments){
 			  //Read 111
 			} else if((int)*(packetBuffer + 312) == 111){
 				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer);
-				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer + 1);	
+				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer + 1);
 				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer + 2);
 				fileSize = (fileSize << 8) + (unsigned char)*(packetBuffer + 3);
 				cout << "Received music size " << fileSize << endl;
@@ -165,7 +184,7 @@ void *thread_ReceiveConnections(void* arguments){
             cout << "Accepted connection" << endl;
         }
     }
-    
+
     pthread_exit(NULL);
     return NULL;
 }
@@ -217,7 +236,7 @@ void *thread_MusicToBytes(void* args){
 
     }
     fclose(wavFile);
-    
+
     pthread_exit(NULL);
     return NULL;
 }
