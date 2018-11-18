@@ -1,8 +1,10 @@
+package MusicFunctions;
+
 import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import com.*;
+
 public class MusicToArray {
 
     //Convert music into byte Array

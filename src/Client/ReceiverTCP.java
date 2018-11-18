@@ -1,3 +1,7 @@
+package Client;
+
+import Client.ClientGetCommandThread;
+
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;

@@ -1,5 +1,7 @@
-import java.io.DataOutputStream;
-import java.util.List;
+package Client;
+
+import MusicFunctions.MusicToArray;
+
 import java.util.concurrent.TimeUnit;
 import java.net.Socket;
 import java.nio.ByteBuffer;
