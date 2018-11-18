@@ -5,7 +5,6 @@ import javax.sound.sampled.SourceDataLine;
 import java.io.BufferedInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-import java.util.Scanner;
 
 public class ReceiverTCP {
 
@@ -29,7 +28,7 @@ public class ReceiverTCP {
                 try {
                     socket = new Socket(host, port);
                     connected = true;
-                    getCommandThread = new GetCommandThread(socket);
+                    getCommandThread = new ClientGetCommandThread(socket);
                     getCommandThread.start();
                 } catch (Exception e) {
                     System.out.println("Unable to connect to server");

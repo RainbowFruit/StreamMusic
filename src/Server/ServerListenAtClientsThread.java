@@ -3,13 +3,13 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.List;
 
-public class ListenAtClientsThread extends Thread {
+public class ServerListenAtClientsThread extends Thread {
 
     private List<Socket> clientSockets = null;
     int sizeOfMusicData = 312;
     private byte[] buffer = new byte[sizeOfMusicData + 1];
 
-    ListenAtClientsThread(List<Socket> list){
+    ServerListenAtClientsThread(List<Socket> list){
         this.clientSockets = list;
     }
 

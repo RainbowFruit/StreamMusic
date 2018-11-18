@@ -2,7 +2,7 @@ import java.io.DataOutputStream;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class MusicSendingThread extends Thread {
+public class ServerMusicSendingThread extends Thread {
 
     private int sizeOfMusicData = 312;
     private int sizeOfBuffer = sizeOfMusicData + 1; //One byte for command
@@ -12,7 +12,7 @@ public class MusicSendingThread extends Thread {
     private byte[] sound = MusicToArray.convert("1.wav");
     private List<DataOutputStream> outputStreamList = null;
 
-    MusicSendingThread(List<DataOutputStream> list){
+    ServerMusicSendingThread(List<DataOutputStream> list){
         outputStreamList = list;
     }
 

@@ -2,11 +2,11 @@ import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-
+import com.*;
 public class MusicToArray {
 
     //Convert music into byte Array
-    static byte[] convert(String pathname) {
+    public static byte[] convert(String pathname) {
 
         int BUFFER_LENGTH = 1024;
         File file = new File(pathname);

@@ -29,11 +29,11 @@ public class SenderTCP {
         }}).start();
 
         //Thread n2
-        Thread n2 = new MusicSendingThread(outputStreamList);
+        Thread n2 = new ServerMusicSendingThread(outputStreamList);
         n2.start();
 
         //Thread n3, listen for commands
-        Thread n3 = new ListenAtClientsThread(clientSockets);
+        Thread n3 = new ServerListenAtClientsThread(clientSockets);
         n3.start();
     }
 }

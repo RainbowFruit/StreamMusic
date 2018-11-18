@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
-public class ClientSendingThread extends Thread {
+public class ClientSendingMusicThread extends Thread {
 
     private int sizeOfMusicData = 312;
     private int sizeOfBuffer = sizeOfMusicData + 1; //One byte for command
@@ -14,7 +14,7 @@ public class ClientSendingThread extends Thread {
     private byte[] sound = MusicToArray.convert("2.wav");
     private Socket socketToServer = null;
 
-    ClientSendingThread(Socket socket){
+    ClientSendingMusicThread(Socket socket){
         socketToServer = socket;
     }
 

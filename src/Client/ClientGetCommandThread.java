@@ -2,14 +2,14 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class GetCommandThread extends Thread {
+public class ClientGetCommandThread extends Thread {
 
     private Socket socketToServer = null;
     int sizeOfMusicData = 312;
     byte[] packet = new byte[sizeOfMusicData + 1];
     Scanner in = new Scanner(System.in);
 
-    GetCommandThread(Socket socket){
+    ClientGetCommandThread(Socket socket){
         socketToServer = socket;
     }
 
@@ -37,7 +37,7 @@ public class GetCommandThread extends Thread {
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
 			//
 			
-			Thread UploadMusicToServer = new ClientSendingThread(socketToServer);
+			Thread UploadMusicToServer = new ClientSendingMusicThread(socketToServer);
 			UploadMusicToServer.start();
 			UploadMusicToServer.join();
 			
