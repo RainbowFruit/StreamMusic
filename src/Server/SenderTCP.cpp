@@ -7,7 +7,9 @@
 #include <error.h>
 #include <iostream>
 #include <pthread.h>
+#include <signal.h>
 #include <vector>
+#include <string>
 
 #define byte unsigned char
 using namespace std;
@@ -36,6 +38,7 @@ typedef struct  WAV_HEADER
 struct arg_struct {
     int servSock;
     vector<int>* clientSockets;
+    const char* musicName;
 };
 
 
@@ -64,12 +67,15 @@ int main(int argc, char ** argv){
     }
 
 
-
+	vector<const char*> musicNames;
+	musicNames.push_back("1.wav");
+	musicNames.push_back("2.wav");
 
 	vector<int> clientSockets;
 	struct arg_struct arguments;
 	arguments.servSock = servSock;
 	arguments.clientSockets = &clientSockets;
+	arguments.musicName = musicNames[0];
 
 	//Thread n1
 	pthread_t receiver;
@@ -77,7 +83,7 @@ int main(int argc, char ** argv){
 
 	//Thread n2
 	pthread_t MusicSendingThread;
-	pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, &clientSockets);
+	pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, (void*)&arguments);
 
 	//Thread n3, listen for commands
 	/*pthread_t ListenAtClientsThread;
@@ -89,23 +95,39 @@ int main(int argc, char ** argv){
 	static const uint16_t BUFFER_SIZE = 312;
     int8_t* buffer = new int8_t[BUFFER_SIZE + 1];
     int bytesRead = 0;
+    bool switcher = false;
 
+	//Receiving signals loop
     while(true){
-    	for(unsigned int i = 0; i < (*clientSockets).size(); i++){
-    		if((bytesRead = read((*clientSockets)[i], buffer, BUFFER_SIZE + 1)) > 0){
+    	for(unsigned int i = 0; i < clientSockets.size(); i++){
+    		if((bytesRead = read(clientSockets[i], buffer, BUFFER_SIZE + 1)) > 0){
     			cout << "Received command number: " << (int)*(buffer + 312) << endl;
     			//Read 100
 				if((int)*(buffer + 312) == 100){
 					//receiveFile((*clientSockets)[i]);
 				} else if((int)*(buffer + 312) == 10){
-					pthread_kill(MusicSendingThread, 9);
+					switcher = !switcher;
+					arguments.musicName = musicNames[switcher];
+					pthread_cancel(MusicSendingThread);
+					//pthread_kill(MusicSendingThread, 3);
 					pthread_join(MusicSendingThread, NULL);
-					pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, &clientSockets);
+					pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, (void*)&arguments);
 				}
-    		}
+    		} else if (bytesRead < 0) {
+    			perror("ListenAtClients read error");	
+    			if(errno == ECONNRESET){
+            		cout << "Deleting socket" << endl;
+            		clientSockets.erase(clientSockets.begin() + i);
+		        }
+		      }
     	}
     }
 }
+
+
+
+
+
 
 
 void *thread_ListenAtClients(void* arguments){
@@ -123,10 +145,18 @@ void *thread_ListenAtClients(void* arguments){
 				if((int)*(buffer + 312) == 100){
 					//receiveFile((*clientSockets)[i]);
 				}
+    		} else if (bytesRead < 0) {
+    			perror("thread_ListenAtClients read error");	
+    			if(errno == ECONNRESET){
+            		cout << "Deleting socket" << endl;
+            		(*clientSockets).erase((*clientSockets).begin() + i);
+		        }
     		}
     	}
     }
 }
+
+
 
 /*void receiveFile(int clientSocket){
 	static const uint16_t BUFFER_SIZE = 312;
@@ -167,6 +197,8 @@ void *thread_ListenAtClients(void* arguments){
     }
 }*/
 
+
+
 void *thread_ReceiveConnections(void* arguments){
     struct arg_struct *args = (struct arg_struct *)arguments;
     vector<int>* clientSockets = args -> clientSockets;
@@ -190,18 +222,18 @@ void *thread_ReceiveConnections(void* arguments){
 }
 
 
+void *thread_MusicToBytes(void* arguments){
 
+    //vector<int>* clientSockets = static_cast<vector<int>*>(args);
 
-
-
-void *thread_MusicToBytes(void* args){
-
-    vector<int>* clientSockets = static_cast<vector<int>*>(args);
-
+	struct arg_struct *args = (struct arg_struct *)arguments;
+    vector<int>* clientSockets = args -> clientSockets;
 	int bytesWrote;
     wav_hdr wavHeader;
     int headerSize = sizeof(wav_hdr);
-    const char* filePath = "1.wav";
+    const char* filePath = args -> musicName;
+    
+    //cout << "Name: " << *(args -> musicName);
     FILE* wavFile = fopen(filePath, "r");
     if (wavFile == nullptr)
     {
@@ -226,7 +258,9 @@ void *thread_MusicToBytes(void* args){
 		            		cout << "Deleting socket" << endl;
 		            		(*clientSockets).erase((*clientSockets).begin() + i);
 		            	}
-		            }
+		            }else if (bytesWrote < 0) {
+						perror("thread_ListenAtClients read error");
+					}
             }
 			usleep(1635);
             //cout << "Sent " << bytesRead << " bytes." << endl;
