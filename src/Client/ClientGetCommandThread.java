@@ -10,6 +10,7 @@ public class ClientGetCommandThread extends Thread {
     int sizeOfMusicData = 312;
     byte[] packet = new byte[sizeOfMusicData + 1];
     Scanner in = new Scanner(System.in);
+	int command = 0;
 
     ClientGetCommandThread(Socket socket){
         socketToServer = socket;
@@ -23,10 +24,19 @@ public class ClientGetCommandThread extends Thread {
 			}
 			
 			//Send 100
-			packet[sizeOfMusicData] = 100;
+			packet[0] = 100;
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
 			
 			//Wait for 105
+			while(command != 105){
+				try {
+					socketToServer.getInputStream().read(packet);
+					command = packet[0];
+					System.out.println("Answer from server: " + command);
+				} catch(Exception e) {
+					e.printStackTrace();
+				}
+			}
 			
 			//Send 110
 			System.out.println("Podaj nazwe pliku: ");
@@ -35,7 +45,7 @@ public class ClientGetCommandThread extends Thread {
 			byte[] bytename = name.getBytes();
 			for(int i = 0; i < bytename.length; i++)
 				packet[i] = bytename[i];
-			packet[sizeOfMusicData] = 110;
+			packet[0] = 110;
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
 			//
 			
@@ -44,7 +54,7 @@ public class ClientGetCommandThread extends Thread {
 			UploadMusicToServer.join();
 			
 			//Send 119 - Finish
-			packet[sizeOfMusicData] = 119;
+			packet[0] = 119;
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);	
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -56,9 +66,9 @@ public class ClientGetCommandThread extends Thread {
     public void run() {
         super.run();
         while(true){
-            packet[312] = (byte)in.nextInt();
+            packet[0] = (byte)in.nextInt();
             if(socketToServer.isConnected()){
-				if(packet[312] == 10){
+				if(packet[0] == 100){
 					sendData();
 				} else {
 		            try {

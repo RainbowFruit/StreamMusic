@@ -47,8 +47,8 @@ public class ReceiverTCP {
             sourceDataLine.open(format);
             sourceDataLine.start();
 
-            BufferedInputStream inFromClient = new BufferedInputStream(socket.getInputStream());
-            DataOutputStream outToClient = new DataOutputStream(socket.getOutputStream());
+            BufferedInputStream inFromServer = new BufferedInputStream(socket.getInputStream());
+            DataOutputStream outToServer = new DataOutputStream(socket.getOutputStream());
 
             int receivedBytes; //Amount of bytes in packet
             int sizeOfMusicData = 312;
@@ -61,7 +61,7 @@ public class ReceiverTCP {
                 long startTime = System.nanoTime();
                 long endTime;
                 try {
-                    while ((receivedBytes = inFromClient.read(buffer)) > 0) {
+                    while ((receivedBytes = inFromServer.read(buffer)) > 0) {
 
                         /*/// Debug info
                         endTime = System.nanoTime();
@@ -73,7 +73,8 @@ public class ReceiverTCP {
                         System.out.println("Answer: " + buffer[312]);
                         ///*/
 
-                        System.arraycopy(buffer, 0, musicBuffer, 0, sizeOfMusicData);
+                        //System.out.println("Answer: " + buffer[0]);
+                        System.arraycopy(buffer, 1, musicBuffer, 0, sizeOfMusicData);
                         toSpeaker(musicBuffer, sourceDataLine);
                     }
                 } catch (Exception e){

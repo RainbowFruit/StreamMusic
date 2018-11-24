@@ -11,7 +11,8 @@ public class ClientSendingMusicThread extends Thread {
     private int sizeOfMusicData = 312;
     private int sizeOfBuffer = sizeOfMusicData + 1; //One byte for command
     private byte answer = -128;
-    private byte[] temp = new byte[sizeOfBuffer];
+    private byte[] musicBuffer = new byte[sizeOfMusicData];
+	private byte[] buffer = new byte[sizeOfBuffer];
     private int totalSendBytes = 0;
     private byte[] sound = MusicToArray.convert("2.wav");
     private Socket socketToServer = null;
@@ -24,30 +25,37 @@ public class ClientSendingMusicThread extends Thread {
     public void run() {
         super.run();
         
-        byte[] fileSize = ByteBuffer.allocate(4).putInt(sound.length).array();
+        /*byte[] fileSize = ByteBuffer.allocate(4).putInt(sound.length).array();
         System.out.print("Sound length: " + sound.length);
         for(int i = 0; i < fileSize.length; i++){
         	System.out.print(fileSize[i] + " ");
         	temp[i] = fileSize[i];
         }
-        temp[312] = 111;
+        temp[sizeOfMusicData] = 111;
         try {
         	socketToServer.getOutputStream().write(temp, 0, sizeOfBuffer);
-        	TimeUnit.MILLISECONDS.sleep(2000);
+        	TimeUnit.MILLISECONDS.sleep(1000);
         } catch (Exception e) {
         	e.printStackTrace();
-        }
-
+        }*/
+		
+		int wroteBytes = 0;
+		//DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socketToServer.getOutputStream()));
         for (int i = 0; i < sound.length; i++) {
-            temp[i % sizeOfMusicData] = sound[i];
+            musicBuffer[i % sizeOfMusicData] = sound[i];
+            wroteBytes++;
             if (i % sizeOfMusicData == sizeOfMusicData - 1) {
-                temp[312] = 115;
+				//System.out.println("Wrote " + wroteBytes + " bytes.");
+				System.arraycopy(musicBuffer, 0, buffer, 1, sizeOfMusicData);
+                buffer[0] = 115;
                 try {
-                	totalSendBytes += temp.length;
-                    socketToServer.getOutputStream().write(temp, 0, sizeOfBuffer);
+                	totalSendBytes += wroteBytes;
+                	wroteBytes = 0;
+                    socketToServer.getOutputStream().write(buffer, 0, sizeOfBuffer);
                     if(totalSendBytes % 10 == 0)
                     	System.out.println("Sent " + totalSendBytes + " bytes");
-                    TimeUnit.NANOSECONDS.sleep(1);
+                    //TimeUnit.NANOSECONDS.sleep(1);
+					//TimeUnit.SECONDS.sleep(20);
                 } catch (Exception e) {
                     System.out.println("Writing to socket failed");
                     e.printStackTrace();
