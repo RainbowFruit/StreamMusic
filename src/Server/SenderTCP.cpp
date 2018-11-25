@@ -149,7 +149,7 @@ void deleteFromVector(vector<int>* clientSockets, int fd){
 //Retrieve musicData from buffer with commandByte
 int8_t* subarray(int8_t* buffer){
 	int8_t* data = new int8_t[BUFFER_SIZE];
-	for(int i = 1; i < BUFFER_SIZE; i++){
+	for(int i = 1; i < BUFFER_SIZE + 1; i++){
 		*(data+i-1) = *(buffer+i);
 	}
 	return data;
@@ -204,13 +204,13 @@ void* thread_Listen(void* arguments){
 			command = (int)*(buffer);
 			cout << "Received signal from: " << ee->data.fd << " command: " << command << endl;
 			cout << "Received: " << receivedBytes << " bytes." << endl;
-			/*if(command == 100) {
+			if(command == 100) {
 				recvFileArgs.clientSocket = ee->data.fd;
 				recvFileArgs.ee = ee;
 				recvFileArgs.epollfd = epollfd;
 				epoll_ctl(epollfd, EPOLL_CTL_DEL, ee->data.fd, ee);  
 				pthread_create(&receiveFileThread, NULL, thread_receiveFile, (void*)&recvFileArgs);
-			}*/
+			}
 			//TODO: Handle commands
 		}
 	}
@@ -279,8 +279,9 @@ void *thread_MusicToBytes(void* arguments){
 		            if((bytesWrote = write((*clientSockets)[i], buffer, bytesRead + 1)) < 0){
 		            	//Handle error
 		            	perror("Write error");
-		            	if(errno == ECONNRESET){
-		            		cout << "Deleting socket" << endl;
+		            	//if(errno == ECONNRESET)
+		            	{
+		            		cout << "Deleting socket, errno: " << errno << endl;
 		            		(*clientSockets).erase((*clientSockets).begin() + i);
 		            	}
 		            }
@@ -298,7 +299,7 @@ void *thread_MusicToBytes(void* arguments){
 
 
 
-/*void *thread_receiveFile(void* recvFile_args){
+void *thread_receiveFile(void* recvFile_args){
 	struct recvFile_struct *args = (struct recvFile_struct*)recvFile_args;
     int clientSocket = args -> clientSocket;
     epoll_event *ee = args -> ee;
@@ -306,9 +307,9 @@ void *thread_MusicToBytes(void* arguments){
     int bytesRead = 0;
     int receiving = 1;
     int command = 0;
-    unsigned int fileSize = 0;
-    //int8_t* musicBuffer = NULL;
-    int offset = 0;
+    int bytesReceived = 0;
+    int totalBytesReceived = 0;
+    int receivedPackets = 0;
     const char* filePath = "ReceivedMusic.wav";
     FILE* wavFile = fopen(filePath, "w");
     if (wavFile == nullptr)
@@ -329,7 +330,9 @@ void *thread_MusicToBytes(void* arguments){
     while(receiving) {
 		if((bytesRead = read(clientSocket, buffer, BUFFER_SIZE + 1)) > 0){ //TODO: Add timeout
 			command = (int)*(buffer);
+			int8_t* tempBuffer = subarray(buffer);
 			switch (command){
+			
 					case 110: //Read 110
 						cout << "Received music name: ";
 						for(int i = 0; i < BUFFER_SIZE; i++){
@@ -338,31 +341,33 @@ void *thread_MusicToBytes(void* arguments){
 						cout << endl;
 					break;
 					
-					case 111: //Read 111
-						fileSize = (fileSize << 8) + (unsigned char)*(buffer);
-						fileSize = (fileSize << 8) + (unsigned char)*(buffer + 1);
-						fileSize = (fileSize << 8) + (unsigned char)*(buffer + 2);
-						fileSize = (fileSize << 8) + (unsigned char)*(buffer + 3);
-						cout << "Received music size " << fileSize << endl;
-						//musicBuffer = new int8_t[fileSize];
-					break;
 					case 115:
-						if(fwrite(subarray(buffer), sizeof *(buffer), bytesRead, wavFile) < 0){
+						if((bytesReceived = fwrite(tempBuffer, sizeof *(buffer),
+						    bytesRead - 1, wavFile)) < 0){
 							perror("Write to file error");
 							pthread_exit(NULL);
 							return NULL;
 						}
+						receivedPackets++;
+						totalBytesReceived += bytesRead - 1;
 					break;
+					
 			 		case 119:
 						cout << "Finished receiving data from " << clientSocket
-						<< ", received bytes: " << offset - 1 << endl;
+						<< ", received bytes: " << totalBytesReceived
+						<< ", received packets: " << receivedPackets << endl;
 						receiving = 0;
 					break;
 			}
+		} else { //Error handle
+			perror("Receiving music error, closing connection");
+			close(clientSocket);
+			pthread_exit(NULL);
+    		return NULL;
 		}
     }    
     epoll_ctl(args -> epollfd, EPOLL_CTL_ADD, clientSocket, ee);  
     pthread_exit(NULL);
     return NULL;
-}*/
+}
 

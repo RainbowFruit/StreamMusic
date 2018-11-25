@@ -68,16 +68,12 @@ public class ClientGetCommandThread extends Thread {
         while(true){
             packet[0] = (byte)in.nextInt();
             if(socketToServer.isConnected()){
-				if(packet[0] == 100){
-					sendData();
-				} else {
-		            try {
-		                socketToServer.getOutputStream().write(packet, 0, 312 + 1);
-		            } catch (IOException e) {
-		                e.printStackTrace();
-		                return;
-		            }
-                }
+	            try {
+	                socketToServer.getOutputStream().write(packet, 0, 312 + 1);
+	            } catch (IOException e) {
+	                e.printStackTrace();
+	                return;
+	            }
             }
         }
     }

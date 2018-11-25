@@ -19,6 +19,7 @@ public class ReceiverTCP {
         String host = "127.0.0.1";
 
         Thread getCommandThread = null;
+        Thread SendingMusicThread = null;
 
         while(true) {
             /////////////////////////////
@@ -47,8 +48,8 @@ public class ReceiverTCP {
             sourceDataLine.open(format);
             sourceDataLine.start();
 
-            BufferedInputStream inFromServer = new BufferedInputStream(socket.getInputStream());
-            DataOutputStream outToServer = new DataOutputStream(socket.getOutputStream());
+            BufferedInputStream inFromClient = new BufferedInputStream(socket.getInputStream());
+            DataOutputStream outToClient = new DataOutputStream(socket.getOutputStream());
 
             int receivedBytes; //Amount of bytes in packet
             int sizeOfMusicData = 312;
@@ -61,7 +62,7 @@ public class ReceiverTCP {
                 long startTime = System.nanoTime();
                 long endTime;
                 try {
-                    while ((receivedBytes = inFromServer.read(buffer)) > 0) {
+                    while ((receivedBytes = inFromClient.read(buffer)) > 0) {
 
                         /*/// Debug info
                         endTime = System.nanoTime();
@@ -74,8 +75,13 @@ public class ReceiverTCP {
                         ///*/
 
                         //System.out.println("Answer: " + buffer[0]);
-                        System.arraycopy(buffer, 1, musicBuffer, 0, sizeOfMusicData);
-                        toSpeaker(musicBuffer, sourceDataLine);
+						if(buffer[0] == -128){
+		                    System.arraycopy(buffer, 1, musicBuffer, 0, sizeOfMusicData);
+		                    toSpeaker(musicBuffer, sourceDataLine);
+                        } else if (buffer[0] == 105) {
+                        	SendingMusicThread = new ClientSendingMusicThread(socket);
+                        	SendingMusicThread.start();
+                        }
                     }
                 } catch (Exception e){
                     e.printStackTrace();

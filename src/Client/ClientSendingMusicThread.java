@@ -25,43 +25,32 @@ public class ClientSendingMusicThread extends Thread {
     public void run() {
         super.run();
         
-        /*byte[] fileSize = ByteBuffer.allocate(4).putInt(sound.length).array();
-        System.out.print("Sound length: " + sound.length);
-        for(int i = 0; i < fileSize.length; i++){
-        	System.out.print(fileSize[i] + " ");
-        	temp[i] = fileSize[i];
-        }
-        temp[sizeOfMusicData] = 111;
-        try {
-        	socketToServer.getOutputStream().write(temp, 0, sizeOfBuffer);
-        	TimeUnit.MILLISECONDS.sleep(1000);
-        } catch (Exception e) {
-        	e.printStackTrace();
-        }*/
-		
 		int wroteBytes = 0;
-		//DataOutputStream out = new DataOutputStream(new BufferedOutputStream(socketToServer.getOutputStream()));
-        for (int i = 0; i < sound.length; i++) {
-            musicBuffer[i % sizeOfMusicData] = sound[i];
-            wroteBytes++;
-            if (i % sizeOfMusicData == sizeOfMusicData - 1) {
-				//System.out.println("Wrote " + wroteBytes + " bytes.");
-				System.arraycopy(musicBuffer, 0, buffer, 1, sizeOfMusicData);
-                buffer[0] = 115;
-                try {
-                	totalSendBytes += wroteBytes;
-                	wroteBytes = 0;
-                    socketToServer.getOutputStream().write(buffer, 0, sizeOfBuffer);
-                    if(totalSendBytes % 10 == 0)
-                    	System.out.println("Sent " + totalSendBytes + " bytes");
-                    //TimeUnit.NANOSECONDS.sleep(1);
-					//TimeUnit.SECONDS.sleep(20);
-                } catch (Exception e) {
-                    System.out.println("Writing to socket failed");
-                    e.printStackTrace();
-                }
-            }
+		int sentPackets = 0;
+		try {
+		    for (int i = 0; i < sound.length; i++) {
+		        musicBuffer[i % sizeOfMusicData] = sound[i];
+		        wroteBytes++;
+		        if (i % sizeOfMusicData == sizeOfMusicData - 1) {
+					System.arraycopy(musicBuffer, 0, buffer, 1, sizeOfMusicData);
+		            buffer[0] = 115;
+		            
+		            	totalSendBytes += wroteBytes;
+		            	wroteBytes = 0;
+		                socketToServer.getOutputStream().write(buffer, 0, sizeOfBuffer);
+		                sentPackets++;
+		                if(totalSendBytes % 10 == 0)
+		                	System.out.println("Sent " + totalSendBytes + " bytes");
+		                //TimeUnit.NANOSECONDS.sleep(1);
+		        }
+		    }
+			//Finished uploading to server
+		    buffer[0] = 119;
+        	socketToServer.getOutputStream().write(buffer, 0, sizeOfBuffer);
+        } catch (Exception e) {
+            System.out.println("Writing to socket failed");
+            e.printStackTrace();
         }
-        System.out.println("Sent bytes: " + totalSendBytes);
+        System.out.println("Sent bytes: " + totalSendBytes + " sent packets: " + sentPackets);
     }
 }
