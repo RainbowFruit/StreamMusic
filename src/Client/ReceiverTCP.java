@@ -9,6 +9,8 @@ import javax.sound.sampled.SourceDataLine;
 import java.io.BufferedInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
+import java.util.*;
+import java.lang.String;
 
 public class ReceiverTCP {
 
@@ -17,6 +19,8 @@ public class ReceiverTCP {
         Socket socket = null; //Socket for connection
         int port = 50005; //Port of connection
         String host = "127.0.0.1";
+        //String host = "10.30.20.124";
+
 
         Thread getCommandThread = null;
         Thread SendingMusicThread = null;
@@ -29,10 +33,12 @@ public class ReceiverTCP {
             }
 
             boolean connected = false;
+            System.out.println("flag 1");
             while (!connected) { //Connect until succeeded
                 try {
                     socket = new Socket(host, port);
                     connected = true;
+                    System.out.println("Connected");
                     getCommandThread = new ClientGetCommandThread(socket);
                     getCommandThread.start();
                 } catch (Exception e) {
@@ -57,6 +63,7 @@ public class ReceiverTCP {
             byte[] musicBuffer = new byte[sizeOfMusicData];
             int totalReceivedBytes = 0;
             double totalReceivedPackets = 0;
+            List<String> musicNames = new ArrayList<>();
 
             while (status) {
                 long startTime = System.nanoTime();
@@ -81,6 +88,15 @@ public class ReceiverTCP {
                         } else if (buffer[0] == 105) {
                         	SendingMusicThread = new ClientSendingMusicThread(socket);
                         	SendingMusicThread.start();
+                        } else if (buffer[0] == 124) {
+							//Clear queue
+                        	musicNames.clear();
+                        } else if (buffer[0] == 125) {
+                        	//Add to queue
+                        	musicNames.add(getMusicName(buffer));
+                        } else if (buffer[0] == 126) {
+                        	//Print queue
+                        	printList(musicNames);
                         }
                     }
                 } catch (Exception e){
@@ -94,6 +110,13 @@ public class ReceiverTCP {
         ///////////////////////////
         }
     }
+    
+    private static void printList(List<String> musicNames){
+    	System.out.println("Queue contains: ");
+    	for(int i = 0; i < musicNames.size(); i++){
+    		System.out.println((i+1) + ": " + musicNames.get(i));
+    	}
+    }
 
     private static void toSpeaker(byte musicBytes[], SourceDataLine sourceDataLine) {
         try
@@ -104,4 +127,10 @@ public class ReceiverTCP {
             e.printStackTrace();
         }
     }
+    
+    private static String getMusicName(byte buffer[]) throws Exception {
+    	int i = 1;
+    	while(buffer[++i] != 0);
+    	return new String(Arrays.copyOfRange(buffer, 1, i), "UTF-8");
+   	}
 }

@@ -47,8 +47,8 @@ public class ClientGetCommandThread extends Thread {
 				packet[i] = bytename[i];
 			packet[0] = 110;
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
-			//
 			
+			//Send 115 - music data
 			Thread UploadMusicToServer = new ClientSendingMusicThread(socketToServer);
 			UploadMusicToServer.start();
 			UploadMusicToServer.join();
@@ -66,15 +66,32 @@ public class ClientGetCommandThread extends Thread {
     public void run() {
         super.run();
         while(true){
-            packet[0] = (byte)in.nextInt();
-            if(socketToServer.isConnected()){
-	            try {
-	                socketToServer.getOutputStream().write(packet, 0, 312 + 1);
-	            } catch (IOException e) {
-	                e.printStackTrace();
-	                return;
-	            }
-            }
-        }
+			try {
+		        packet[0] = (byte)in.nextInt();
+		        if(socketToServer.isConnected()){
+		        	if(packet[0] == 10){
+        				System.out.println("Przeskoczono do następnego utworu");
+		        	} else if(packet[0] == 20){
+        				System.out.println("Przeskoczono do poprzedniego utworu");
+		        	} else if(packet[0] == 30){
+        				System.out.println("Podaj numer utworu do włączenia: ");
+				        packet[1] = (byte)in.nextInt();
+		        	} else if(packet[0] == 40){
+        				System.out.println("Podaj numer utworu do usunięcia: ");
+				        packet[1] = (byte)in.nextInt();
+		        	} else if(packet[0] == 50){
+		        		packet[1] = 4;
+		        		packet[2] = 1;
+		        		packet[3] = 3;
+		        		packet[4] = 2;
+		        	}
+				
+				socketToServer.getOutputStream().write(packet, 0, 312 + 1);
+				}
+			} catch (Exception e) {
+			            e.printStackTrace();
+			            //return;
+			}
+	    }
     }
 }
