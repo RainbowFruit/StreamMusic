@@ -296,6 +296,8 @@ void *thread_Listen(void* arguments){
 			}
 		}
 	}
+	delete [] buffer;
+	buffer = nullptr;
 	return NULL;
 }
 
@@ -381,7 +383,7 @@ void *thread_MusicToBytes(void* arguments){
 	           }
 	           		
             }
-			usleep(1635);
+			usleep(700);
         }
         delete [] buffer;
         buffer = nullptr;
@@ -445,7 +447,7 @@ void sendQueueToSocket(vector<const char*>* pMusicNames, vector<int>* pClientSoc
 			deleteFromVector(pClientSockets, sendTo);
 	}
 	delete [] buffer;
-    buffer = nullptr;	
+	buffer = nullptr;	
 }
 
 
@@ -520,8 +522,14 @@ void *thread_receiveFile(void* arguments){
 						receiving = 0;
 					break;
 			}
+			
+			delete [] tempBuffer;
+			tempBuffer = nullptr;
+			
 		} else { //Error handle
 			perror("Receiving music error, closing connection");
+			delete [] buffer;
+			buffer = nullptr;
 			close(clientSocket);
 			pthread_exit(NULL);
     		return NULL;
@@ -531,4 +539,3 @@ void *thread_receiveFile(void* arguments){
     pthread_exit(NULL);
     return NULL;
 }
-
