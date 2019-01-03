@@ -1,4 +1,4 @@
-package MusicFunctions;
+package sample;
 
 import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
@@ -45,5 +45,4 @@ public class MusicToArray {
         //Music in byte array
         return baos.toByteArray();
     }
-
 }

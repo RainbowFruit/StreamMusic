@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.Pane?>
+
+<Pane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="440.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="sample.Controller">
+   <children>
+      <Button fx:id="btn1" layoutX="14.0" layoutY="405.0" mnemonicParsing="false" onAction="#btnPrevAction" text="Send 10 - Prev" />
+      <Button fx:id="btn2" layoutX="130.0" layoutY="405.0" mnemonicParsing="false" onAction="#btnNextAction" text="Send 20 - Next" />
+      <TextField fx:id="textField" layoutX="278.0" layoutY="319.0" />
+      <Button fx:id="gotoBtn" layoutX="293.0" layoutY="350.0" mnemonicParsing="false" onAction="#gotoMusic" prefHeight="31.0" prefWidth="156.0" text="Go to music" />
+      <Label layoutX="304.0" layoutY="298.0" text="Write music number" />
+      <Button fx:id="removeButton" layoutX="313.0" layoutY="381.0" mnemonicParsing="false" onAction="#removeMusic" text="Remove music" />
+      <ListView fx:id="listView" layoutX="14.0" layoutY="14.0" prefHeight="388.0" prefWidth="232.0" />
+      <Button fx:id="upBtn" layoutX="329.0" layoutY="153.0" mnemonicParsing="false" onAction="#upBtn" text="Music Up" />
+      <Button fx:id="downBtn" layoutX="320.0" layoutY="184.0" mnemonicParsing="false" onAction="#downBtn" text="Music Down" />
+      <Button fx:id="getQueueBtn" layoutX="291.0" layoutY="215.0" mnemonicParsing="false" onAction="#getQueueVector" text="Send changed queue" />
+      <Label layoutX="295.0" layoutY="14.0" text="Server IP to connect to" />
+      <TextField fx:id="textFieldip" layoutX="278.0" layoutY="43.0" text="192.168.0.101" />
+      <Button fx:id="btnConnect" layoutX="333.0" layoutY="74.0" mnemonicParsing="false" onAction="#btnConnectClick" text="Connect" />
+      <Label layoutX="323.0" layoutY="122.0" text="Queue control" />
+   </children>
+</Pane>
