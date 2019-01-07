@@ -48,7 +48,7 @@ public class ClientGetCommandThread extends Thread {
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
 			
 			//Send 115 - music data
-			Thread UploadMusicToServer = new ClientSendingMusicThread(socketToServer);
+			Thread UploadMusicToServer = new ClientSendingMusicThread(socketToServer, name);
 			UploadMusicToServer.start();
 			UploadMusicToServer.join();
 			

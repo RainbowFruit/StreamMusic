@@ -8,20 +8,20 @@ import java.io.IOException;
 public class MusicToArray {
 
     //Convert music into byte Array
-    public static byte[] convert(String pathname) {
+    public static byte[] convert(String pathname) throws Exception{
 
         int BUFFER_LENGTH = 1024;
         File file = new File(pathname);
         AudioInputStream inputAIS;
         AudioFileFormat fileFormat;
 
-        try {
-            inputAIS = AudioSystem.getAudioInputStream(file);
-            fileFormat = AudioSystem.getAudioFileFormat(file);
-        } catch (UnsupportedAudioFileException | IOException e) {
-            e.printStackTrace();
-            return new byte[10];
-        }
+        //try {
+        inputAIS = AudioSystem.getAudioInputStream(file);
+        fileFormat = AudioSystem.getAudioFileFormat(file);
+       //} catch (UnsupportedAudioFileException | IOException e) {
+           // e.printStackTrace();
+           // return new byte[10];
+        //}
 
         AudioFormat audioFormat = fileFormat.getFormat();
         System.out.println(" Frame rate: " + audioFormat.getFrameRate() + " Frame size: " + audioFormat.getFrameSize() + " Channels: " + audioFormat.getChannels() + " Sample size in bits: " + audioFormat.getSampleSizeInBits() + " Encoding: " + audioFormat.getEncoding() + " Sample rate: " + audioFormat.getSampleRate());

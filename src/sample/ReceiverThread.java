@@ -93,7 +93,7 @@ public class ReceiverThread extends Thread {
                                 System.arraycopy(buffer, 1, musicBuffer, 0, sizeOfMusicData);
                                 toSpeaker(musicBuffer, sourceDataLine);
                             } else if (buffer[0] == 105) {
-                                SendingMusicThread = new ClientSendingMusicThread(StaticFields.socket);
+                                SendingMusicThread = new ClientSendingMusicThread(StaticFields.socket, StaticFields.musicTitleToSend);
                                 SendingMusicThread.start();
                             } else if (buffer[0] == 124) {
                                 //Clear queue

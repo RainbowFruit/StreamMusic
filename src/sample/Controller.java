@@ -34,6 +34,9 @@ public class Controller {
     private TextField textFieldip;
 
     @FXML
+    private TextField textFieldTitle;
+
+    @FXML
     public void initialize(){
         listView.setOnMouseClicked(event -> textField.setText(Integer.toString(listView.getSelectionModel().getSelectedIndex() + 1)));
     }
@@ -104,11 +107,23 @@ public class Controller {
         }
     }
 
-    public void updatelistView(List<String> musicNames){
+    void updatelistView(List<String> musicNames){
         listView.getSelectionModel().clearSelection();
         listView.getItems().clear();
         for(int i = 0; i < musicNames.size(); i++){
             listView.getItems().add(i, (i+1) + " " + musicNames.get(i));
         }
+    }
+
+    void updatetextView(String message){
+        textFieldTitle.setText(message);
+    }
+
+    @FXML
+    void sendMusic(ActionEvent event){
+        StaticFields.musicTitleToSend = textFieldTitle.getText();
+        //Thread SendingMusicThread = new ClientSendingMusicThread(StaticFields.socket, StaticFields.musicTitleToSend);
+        //SendingMusicThread.start();
+        send((byte)100);
     }
 }

@@ -1,5 +1,6 @@
 package sample;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -12,12 +13,14 @@ public class ClientSendingMusicThread extends Thread {
     private byte[] musicBuffer = new byte[sizeOfMusicData];
 	private byte[] buffer = new byte[sizeOfBuffer];
     private int totalSendBytes = 0;
-    private byte[] sound = MusicToArray.convert("2.wav");
+    private byte[] sound;
     private Socket socketToServer = null;
-    Scanner in = new Scanner(System.in);
+    //Scanner in = new Scanner(System.in);
+	private String title;
 
-    ClientSendingMusicThread(Socket socket){
-        socketToServer = socket;
+    ClientSendingMusicThread(Socket socket, String title){
+        this.socketToServer = socket;
+        this.title = title;
     }
 
     @Override
@@ -25,10 +28,25 @@ public class ClientSendingMusicThread extends Thread {
         super.run();
         
         Arrays.fill(buffer, (byte)0);
-        System.out.println("Podaj nazwe pliku: ");
+
+        try {
+			sound = MusicToArray.convert(title);
+		} catch (Exception e){
+        	System.out.println("Failed to open file");
+        	StaticFields.myController.updatetextView("Failed to open file");
+			buffer[0] = 119;
+			try {
+				socketToServer.getOutputStream().write(buffer, 0, sizeOfBuffer);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			return;
+		}
+        /*System.out.println("Podaj nazwe pliku: ");
 		in.nextLine();
 		String name = in.nextLine();
-		byte[] bytename = name.getBytes();
+		byte[] bytename = name.getBytes();*/
+        byte[] bytename = title.getBytes();
 		for(int i = 1; i <= bytename.length; i++)
 			buffer[i] = bytename[i-1];
 		buffer[0] = 110;
