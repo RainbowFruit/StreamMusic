@@ -15,7 +15,6 @@
 #define byte unsigned char
 using namespace std;
 
-const int one = 1;
 typedef struct  WAV_HEADER
 {
     /* RIFF Chunk Descriptor */
@@ -36,6 +35,7 @@ typedef struct  WAV_HEADER
     uint32_t        Subchunk2Size;  // Sampled data length
 } wav_hdr;
 
+//Struct for passing arguments to threads
 struct arg_struct {
     int servSock;
     int epollfd;
@@ -202,6 +202,7 @@ int8_t* getMusicName(int8_t* buffer, int to){
 
 //Initialize servSock
 int makeServSock(int port){
+	int one = 1;
 	sockaddr_in localAddress{
         .sin_family = AF_INET,
         .sin_port   = htons(port),
@@ -212,7 +213,7 @@ int makeServSock(int port){
     setsockopt(servSock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
     
     if(bind(servSock, (sockaddr*) &localAddress, sizeof(localAddress))) {
-        error(1,errno,"Bind failed!");
+        error(1,errno,"makeServSock: Bind failed!");
     }
     return servSock;
 }
@@ -335,7 +336,7 @@ void *thread_ReceiveConnections(void* arguments){
 	while(true){
         sock = accept(servSock, nullptr, nullptr);
         if(sock == -1){
-            perror("Accept error");
+            perror("thread_ReceiveConnections: Accept error");
         } else {
             (*pClientSockets).push_back(sock);
             event->data.fd = sock;
@@ -383,7 +384,7 @@ void *thread_MusicToBytes(void* arguments){
             	if(*pSwitcher){
 		            if((bytesWrote = write((*pClientSockets)[i], buffer, bytesRead + 1)) < 0){
 		            	//Handle error
-		            	perror("Write error");
+		            	perror("thread_MusicToBytes: Write error");
 		            	//if(errno == ECONNRESET)
 		            	{
 		            		cout << "Deleting socket, errno: " << errno << endl;
@@ -391,7 +392,7 @@ void *thread_MusicToBytes(void* arguments){
 		            	}
 		            }
 	           } else {
-            		cout << "Thread aborted" << endl;
+            		cout << "thread_MusicToBytes: Thread aborted" << endl;
 	           		delete [] buffer;
         			buffer = nullptr;
 	           		fclose(wavFile);
@@ -491,7 +492,7 @@ void *thread_receiveFile(void* arguments){
     
 	buffer[0] = 105;
 	if(write(clientSocket, buffer, PACKET_SIZE) < 0){
-		perror("Write command 105 error");
+		perror("thread_receiveFile: Write command 105 error");
 		pthread_exit(NULL);
 		return NULL;
 	}
@@ -524,7 +525,7 @@ void *thread_receiveFile(void* arguments){
 					case 115:
 						if((bytesReceived = fwrite(tempBuffer, sizeof *(buffer),
 						    bytesRead - 1, wavFile)) < 0){
-							perror("Write to file error");
+							perror("thread_receiveFile: Write to file error");
 							pthread_exit(NULL);
 							return NULL;
 						}
@@ -543,7 +544,7 @@ void *thread_receiveFile(void* arguments){
 					break;
 			}			
 		} else { //Error handle
-			perror("Receiving music error, closing connection");
+			perror("thread_receiveFile: Receiving music error, closing connection");
 			delete [] buffer;
 			buffer = nullptr;
 			close(clientSocket);
