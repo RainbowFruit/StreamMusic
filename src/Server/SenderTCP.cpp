@@ -11,9 +11,12 @@
 #include <signal.h>
 #include <vector>
 #include <cstring>
+#include <chrono>
 
 #define byte unsigned char
 using namespace std;
+using ns = chrono::nanoseconds;
+using get_time = chrono::steady_clock;
 
 const int one = 1;
 typedef struct  WAV_HEADER
@@ -252,11 +255,11 @@ void *thread_Listen(void* arguments){
 		if((receivedBytes = read(ee->data.fd, buffer, PACKET_SIZE)) < 0){
 		//Handle error
 			perror("thread_Listen read error");	
-    			if(errno == ECONNRESET){
+    			//if(errno == ECONNRESET){
             		cout << "Closing socket: " << errno << endl;
 					close(ee->data.fd);
 					deleteFromVector(pClientSockets, ee->data.fd);
-		        }
+		        //}
 		} else {
 			command = (int)*(buffer);
 			cout << "Received signal from: " << ee->data.fd << " command: " << command << endl;
@@ -347,6 +350,10 @@ void *thread_MusicToBytes(void* arguments){
     bool* pSwitcher = &(args -> isMusicThreadRunning);
 	unsigned int* pCurrentMusic = args -> pCurrentMusic;
     
+    
+    int sentBytes = 0;
+    //auto startTime, endTime;
+    
 	int bytesWrote;
     wav_hdr wavHeader;
     int headerSize = sizeof(wav_hdr);
@@ -362,6 +369,10 @@ void *thread_MusicToBytes(void* arguments){
     //cout << "Header Read " << bytesRead << " bytes." << endl;
     if (bytesRead > 0)
     {
+    
+		auto startTime = get_time::now();    
+    
+    
         int8_t* buffer = new int8_t[PACKET_SIZE];
         //While data in wav File
         while ((bytesRead = fread(buffer + 1, sizeof buffer[0],
@@ -389,6 +400,10 @@ void *thread_MusicToBytes(void* arguments){
 	           }
 	           		
             }
+            sentBytes += bytesWrote;
+            auto endTime = get_time::now();
+            cout << "sentBytes: " << sentBytes << " " << chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000 << endl;
+            cout << "Bytes per second: " << sentBytes*1.0/(chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000) << " / 176375" << endl;
 			usleep(700);
         }
         delete [] buffer;
@@ -439,7 +454,9 @@ void sendQueueToSocket(vector<const char*>* pMusicNames, vector<int>* pClientSoc
 			for(unsigned int m = 0; m < strlen((*pMusicNames)[i]); m++){
 				//Convert name to buffer
 				buffer[m+1] = (*pMusicNames)[i][m];
+				cout << (*pMusicNames)[i][m];
 			}
+			cout << endl;
 			buffer[0] = 125;
 			write(sendTo, buffer, PACKET_SIZE);
 			clearBuffer(buffer);
@@ -533,9 +550,6 @@ void *thread_receiveFile(void* arguments){
 					break;
 			}
 			
-			delete [] tempBuffer;
-			tempBuffer = nullptr;
-			
 		} else { //Error handle
 			perror("thread_receiveFile: Receiving music error, closing connection");
 			delete [] buffer;
@@ -549,8 +563,8 @@ void *thread_receiveFile(void* arguments){
     epoll_ctl(args -> epollfd, EPOLL_CTL_ADD, clientSocket, ee);  
     delete [] buffer;
 	buffer = nullptr;
-	delete [] receivedName;
-	receivedName = nullptr;
+	//delete [] receivedName;
+	//receivedName = nullptr;
     pthread_exit(NULL);
     return NULL;
 }
