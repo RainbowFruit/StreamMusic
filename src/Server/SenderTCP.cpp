@@ -39,7 +39,7 @@ typedef struct  WAV_HEADER
     uint32_t        Subchunk2Size;  // Sampled data length
 } wav_hdr;
 
- //Struct for passing arguments to threads
+//Struct for passing arguments to threads
 struct arg_struct {
     int servSock;
     int epollfd;
@@ -94,6 +94,9 @@ int main(int argc, char ** argv){
         error(1,0,"Usage: %s <port>", argv[0]);
 	}
 
+	/*******************************/
+	//Variables declarations and init
+
 	//Thread n1
 	pthread_t receiver;
 	
@@ -103,14 +106,12 @@ int main(int argc, char ** argv){
 	//Thread n3
 	pthread_t ListenAtClients;
 	
-	//Thread for queue update signal
-	//pthread_t queueUpdateThread;
-	
 	int servSock = makeServSock(atoi(argv[1])); //Server socket
 	int epollfd = epoll_create1(0);
 	epoll_event ee {};
 	ee.events = EPOLLIN;
 	
+	//musicName init
 	vector<const char*> musicNames;
 	musicNames.push_back("Strefa komfortu.wav");
 	musicNames.push_back("Russia.wav"); 
@@ -120,6 +121,7 @@ int main(int argc, char ** argv){
 	unsigned int currentMusic = 0;
 	vector<int> clientSockets;
 	
+	//Struct init
 	struct arg_struct arguments; //Struct for pthreads
 	arguments.servSock = servSock;
 	arguments.pCurrentMusic = &currentMusic;
@@ -128,18 +130,24 @@ int main(int argc, char ** argv){
 	arguments.ee = &ee;
 	arguments.epollfd = epollfd;
 	arguments.currentClientSocket = 1200;
+	
+	/*******************************/
+	
+	//Create threads
 
-	//Receive connections
+	//Receive incoming connections
 	pthread_create (&receiver, NULL, &thread_ReceiveConnections, (void*)&arguments);
-	//Music sending
+	
+	//Send music to all connected clients
 	pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, (void*)&arguments);
-	//Listen at clients
+	
+	//Listen at incoming commands from clients
 	pthread_create (&ListenAtClients, NULL, &thread_Listen, (void*)&arguments);
 	
-	//pthread_create (&queueUpdateThread, NULL, &thread_sendQueue, (void*)&arguments);
-
+	//Ensure that program sends music all time, if thread finish or is interrupted then create new thread
 	while(true){
 		pthread_join(MusicSendingThread, NULL);
+		//Set true to allow thread to run
 		arguments.isMusicThreadRunning = true;
 		pthread_create(&MusicSendingThread, NULL, &thread_MusicToBytes, (void*)&arguments);
 	}
@@ -151,6 +159,7 @@ const char* getMusic(struct arg_struct* arguments){
 	struct arg_struct *args = (struct arg_struct*)arguments;
 	unsigned int* pCurrentMusic = args -> pCurrentMusic;
 	vector<const char*>* pMusicNames = args -> pMusicNames;
+	//If index is higher than size of music queue, then go to beginning
 	if(*pCurrentMusic >= pMusicNames -> size()){
 		*pCurrentMusic = 0;
 	}
@@ -176,14 +185,15 @@ int8_t* subarray(int8_t* buffer){
 	return data;
 }
 
-int8_t* getMusicName(int8_t* buffer, int to){
+//Get music name from buffer
+int8_t* getMusicName(int8_t* buffer, int endsAt){
 	int8_t* data = new int8_t[MUSIC_SIZE];
  	//Start from 1 because of command byte
 	int i = 1;
-	for(i = 1; i < to; i++){
+	for(i = 1; i < endsAt; i++){
 		*(data+i-1) = *(buffer+i);
 	}
-	//const char* wavEnding = ".wav";
+	//Add ".wav" at end of music name
 	*(data-1+i++) = 46;
 	*(data-1+i++) = 119;
 	*(data-1+i++) = 97;
@@ -230,38 +240,48 @@ void sortQueue(int8_t* buffer, struct arg_struct *args){
 	for(unsigned int i = 0; i < (*pMusicNames).size(); i++){
 		cout << (*pMusicNames)[i] << endl;
 	}	
+	//Free memory
+	vector<const char*>().swap(tempVector);
 }
 
 /************
 // THREADS //
 ************/
 
+
 //Thread listening at clientSockets
 void *thread_Listen(void* arguments){
+
+	/*************/
+	//Variables shared between threads
 	struct arg_struct *args = (struct arg_struct*)arguments;
 	int epollfd = args -> epollfd;
 	unsigned int* pCurrentMusic = args -> pCurrentMusic;
 	vector<int>* pClientSockets = args -> pClientSockets;
 	vector<const char*>* pMusicNames = args -> pMusicNames;
 	epoll_event *ee = args -> ee;
+	/*************/
 	
+	//Thread local variables
 	int8_t* buffer = new int8_t[PACKET_SIZE];
-	int command = 0;
-	int receivedBytes = 0;
+	int command = 0; //Command received from client
+	int receivedBytes = 0; //Amount of bytes received
 	pthread_t receiveFileThread;
 	pthread_t SendUpdatedQueue;
 
+	//Listen for commands
 	while(epoll_wait(epollfd, ee, 1, -1)){
 		if((receivedBytes = read(ee->data.fd, buffer, PACKET_SIZE)) < 0){
-		//Handle error
+			//Handle error
 			perror("thread_Listen read error");	
-    			//if(errno == ECONNRESET){
-            		cout << "Closing socket: " << errno << endl;
-					close(ee->data.fd);
-					deleteFromVector(pClientSockets, ee->data.fd);
-		        //}
+    		cout << "Closing socket: " << errno << endl;
+			close(ee->data.fd);
+			deleteFromVector(pClientSockets, ee->data.fd);
+			
 		} else {
-			command = (int)*(buffer);
+		
+			command = (int)*(buffer); //Command is at first byte
+			
 			cout << "Received signal from: " << ee->data.fd << " command: " << command << endl;
 			if(command == 100) {
 				//Client wants to send file
@@ -279,8 +299,8 @@ void *thread_Listen(void* arguments){
 			if(command == 10) {
 				//Next music
 				*pCurrentMusic = *pCurrentMusic + 1;
+				//Interrupt current music sending thread
 				args -> isMusicThreadRunning = false;
- 			    //pthread_create (&MusicSendingThread, NULL, &thread_MusicToBytes, (void*)args);
 			}
 			if(command == 20){
 				//Prev music
@@ -291,13 +311,12 @@ void *thread_Listen(void* arguments){
  				//Go to music
 				*pCurrentMusic = (int)*(buffer + 1) - 1;
 				args -> isMusicThreadRunning = false;
-				//TODO: Go to music number in packet; Implement in client
 			}
 			if(command == 40){
- 				//Remove music
+ 				//Remove music, index is at second byte
 				if((*pMusicNames).size() >= (unsigned int)*(buffer + 1)){
 					(*pMusicNames).erase((*pMusicNames).begin() + (int)*(buffer + 1) - 1);
-					args -> currentClientSocket = -1;
+					args -> currentClientSocket = -1; //Update queue at all clients
 	 			    pthread_create (&SendUpdatedQueue, NULL, &thread_sendQueue, (void*)args);
  			    } else {
  			    	cout << "Delete error: index out of bound" << endl;
@@ -313,14 +332,21 @@ void *thread_Listen(void* arguments){
 
 //Listen at servSock, receive connections, put client sockets at vector and add them to epoll
 void *thread_ReceiveConnections(void* arguments){
+
+	/*************/
+	//Variables shared between threads
     struct arg_struct *args = (struct arg_struct *)arguments;
     int servSock = args -> servSock;
     int epollfd = args -> epollfd;
     vector<int>* pClientSockets = args -> pClientSockets;
     epoll_event *event = args -> ee;
+    /*************/
+    
+	//Thread local variables
     int sock = 0;
     pthread_t queueUpdateThread;
 
+	//Start server
 	listen(servSock, 1);
 	cout << "Server started" << endl;
 
@@ -329,15 +355,18 @@ void *thread_ReceiveConnections(void* arguments){
         if(sock == -1){
             perror("thread_ReceiveConnections: Accept error");
         } else {
+        	//Add socket to global vector with sockets
             (*pClientSockets).push_back(sock);
+            //Add socket to epoll
             event->data.fd = sock;
             epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, event);  
+            //Send queue to this new client
             args -> currentClientSocket = sock;
             pthread_create (&queueUpdateThread, NULL, &thread_sendQueue, (void*)args);
             cout << "Accepted connection, socket: " << sock << endl;
         }
     }
-
+    
     pthread_exit(NULL);
     return NULL;
 }
@@ -345,71 +374,79 @@ void *thread_ReceiveConnections(void* arguments){
 
 //Convert music to byte array and send it to all client sockets
 void *thread_MusicToBytes(void* arguments){
+
+	/*************/
+	//Variables shared between threads
 	struct arg_struct *args = (struct arg_struct *)arguments;
     vector<int>* pClientSockets = args -> pClientSockets;
-    bool* pSwitcher = &(args -> isMusicThreadRunning);
+    bool* pCanThreadRun = &(args -> isMusicThreadRunning);
 	unsigned int* pCurrentMusic = args -> pCurrentMusic;
+    /*************/
     
+    int debugSentBytes = 0; //Debug variable
     
-    int sentBytes = 0;
-    //auto startTime, endTime;
-    
-	int bytesWrote;
+	//Thread local variables
+	int sentBytes; //Amount of sent bytes by write()
     wav_hdr wavHeader;
     int headerSize = sizeof(wav_hdr);
     const char* filePath = getMusic(args);  
-    FILE* wavFile = fopen(filePath, "r");
+    FILE* wavFile = fopen(filePath, "r"); //Open music file
     if (wavFile == nullptr)
     {
         fprintf(stderr, "Unable to open wave file: %s\n", filePath);
         return 0;
     }
+    
     //Read the header
     size_t bytesRead = fread(&wavHeader, 1, headerSize, wavFile);
-    //cout << "Header Read " << bytesRead << " bytes." << endl;
     if (bytesRead > 0)
     {
     
-		auto startTime = get_time::now();    
-    
+		auto startTime = get_time::now(); //Debug variable  
     
         int8_t* buffer = new int8_t[PACKET_SIZE];
+        
         //While data in wav File
         while ((bytesRead = fread(buffer + 1, sizeof buffer[0],
         	    MUSIC_SIZE / (sizeof buffer[0]), wavFile)) > 0)
         {
-        	buffer[0] = -128;
+        	buffer[0] = -128; //Set command
+        	//Send to every connected client
             for(unsigned int i = 0; i < pClientSockets->size(); i++){
-            	if(*pSwitcher){
-		            if((bytesWrote = write((*pClientSockets)[i], buffer, bytesRead + 1)) < 0){
-		            	//Handle error
-		            	perror("thread_MusicToBytes: Write error");
-		            	//if(errno == ECONNRESET)
-		            	{
-		            		cout << "Deleting socket, errno: " << errno << endl;
-		            		(*pClientSockets).erase((*pClientSockets).begin() + i);
-		            	}
-		            }
-	           } else {
+            	//Check if thread is interrupted
+            	if(!*pCanThreadRun) {
             		cout << "thread_MusicToBytes: Thread aborted" << endl;
 	           		delete [] buffer;
         			buffer = nullptr;
 	           		fclose(wavFile);
 					pthread_exit(NULL);
-					return NULL;
-	           }
+					return NULL;		           
+	           } 
+   			   //Send music data
+	           if((sentBytes = write((*pClientSockets)[i], buffer, bytesRead + 1)) < 0){
+	            	//Handle error
+	            	perror("thread_MusicToBytes: Write error");
+            		cout << "Deleting socket, errno: " << errno << endl;
+            		(*pClientSockets).erase((*pClientSockets).begin() + i);
+	            }
 	           		
             }
-            sentBytes += bytesWrote;
+
+            /*************
+            //Debug info
+            debugSentBytes += sentBytes;
             auto endTime = get_time::now();
-            cout << "sentBytes: " << sentBytes << " " << chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000 << endl;
-            cout << "Bytes per second: " << sentBytes*1.0/(chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000) << " / 176375" << endl;
+            cout << "sentBytes: " << debugSentBytes << " " << chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000 << endl;
+            cout << "Bytes per second: " << debugSentBytes*1.0/(chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000) << " / 176375" << endl;
+            /*************/
+            
+            //Delay
 			usleep(700);
         }
         delete [] buffer;
         buffer = nullptr;
     }
-    //After sending music, go up in queue
+    //After sending music, go to next music in queue
     *pCurrentMusic = *pCurrentMusic + 1;
     fclose(wavFile);
     pthread_exit(NULL);
@@ -419,18 +456,23 @@ void *thread_MusicToBytes(void* arguments){
 
 //Thread which handles music names sending to clients
 void *thread_sendQueue(void* arguments){
+
+	/*************/
+	//Variables shared between threads
 	struct arg_struct *args = (struct arg_struct *)arguments;
 	int currentClientSocket = args -> currentClientSocket;
     vector<int>* pClientSockets = args -> pClientSockets;
 	vector<const char*>* pMusicNames = args -> pMusicNames;
+	/*************/
     
+    //Send queue to all connected clients
     if(currentClientSocket == -1){
-        cout << "Sending updated queue" << endl;
-		//For every socket
+        cout << "Sending updated queue to all clients" << endl;
 		for(unsigned int n = 0; n < pClientSockets->size(); n++){
 			sendQueueToSocket(pMusicNames, pClientSockets, (*pClientSockets)[n]);
 		}
     } else if(currentClientSocket > 2) {
+    	//Send queue only to currentClientSocket
         cout << "Sending queue to new user: " << currentClientSocket << endl;
     	sendQueueToSocket(pMusicNames, pClientSockets, currentClientSocket);
     }
@@ -478,24 +520,28 @@ void sendQueueToSocket(vector<const char*>* pMusicNames, vector<int>* pClientSoc
 
 //Thread for file receiving
 void *thread_receiveFile(void* arguments){
+
+	/*************/
+	//Variables shared between threads
 	struct arg_struct *args = (struct arg_struct *)arguments;
     int clientSocket = args -> currentClientSocket;
 	vector<const char*>* pMusicNames = args -> pMusicNames;
     epoll_event *ee = args -> ee;
+    /*************/
     
+	//Thread local variables
     int8_t* buffer = new int8_t[PACKET_SIZE];
-    int bytesRead = 0;
-    int receiving = 1;
-    int command = 0;
-    int bytesReceived = 0;
-    int totalBytesReceived = 0;
-    int receivedPackets = 0;
-    const char* filePath = "ReceivedMusic.wav";
+    int bytesRead = 0; //Amount of bytes read from read()
+    int receiving = 1; //Tells to still listen or to finish receiving music file
+    int command = 0; //Command from client
+    int bytesWrittenToFile = 0; //Amount of bytes written to file
+    int totalBytesReceived = 0; //Statistics variable
+    int receivedPackets = 0; //Statistics variable
     FILE* wavFile = nullptr;
     const char* receivedName = nullptr;
-    
     pthread_t SendUpdatedQueue;
     
+    //Send ready signal
 	buffer[0] = 105;
 	if(write(clientSocket, buffer, PACKET_SIZE) < 0){
 		perror("thread_receiveFile: Write command 105 error");
@@ -506,21 +552,21 @@ void *thread_receiveFile(void* arguments){
 	cout << "Started receiving file from " << clientSocket << endl;
 		
     while(receiving) {
+    	//Listen at client until he sends stop signal
 		if((bytesRead = read(clientSocket, buffer, PACKET_SIZE)) > 0){ //TODO: Add timeout
-			command = (int)*(buffer);
-			int8_t* tempBuffer = subarray(buffer);
+			command = (int)*(buffer); //Command is at first byte
+			int8_t* musicBuffer = subarray(buffer); //Make pure music buffer without command byte
 			switch (command){
-			
 					case 110: //Read 110
 						for(int i = 1; i < MUSIC_SIZE; i++){
  							//Check where string ends
 							if((int)*(buffer + i) == 0){
 								receivedName = (const char*)getMusicName(buffer, i);
-								cout << "Received music name: "
-								 << receivedName << endl;
+								cout << "Received music name: " << receivedName << endl;
+								//Create or overwrite file with receivedName
 								wavFile = fopen(receivedName, "w");
 								if (wavFile == nullptr){
-									fprintf(stderr, "Unable to open wave file: %s\n", filePath);
+									fprintf(stderr, "Unable to open wave file: %s\n", receivedName);
 									return 0;
 								}
 								break;
@@ -529,28 +575,34 @@ void *thread_receiveFile(void* arguments){
 					break;
 					
 					case 115:
-						if((bytesReceived = fwrite(tempBuffer, sizeof *(buffer),
+						//Write music buffer to file
+						if((bytesWrittenToFile = fwrite(musicBuffer, sizeof *(buffer),
 						    bytesRead - 1, wavFile)) < 0){
 							perror("thread_receiveFile: Write to file error");
 							pthread_exit(NULL);
 							return NULL;
 						}
-						receivedPackets++;
+						receivedPackets++; //Statistics info
 						totalBytesReceived += bytesRead - 1;
 					break;
 					
-			 		case 119:
+			 		case 119: //Stop signal
+			 			//Add new music name to queue
 			 			(*pMusicNames).push_back(receivedName);
+			 			
+			 			//Send updated queue to all clients
 			 			args -> currentClientSocket = -1;
  			            pthread_create (&SendUpdatedQueue, NULL, &thread_sendQueue, (void*)args);
+ 			            
+ 			            //Statistics info
 						cout << "Finished receiving data from " << clientSocket
 						<< ", received bytes: " << totalBytesReceived
 						<< ", received packets: " << receivedPackets << endl;
-						receiving = 0;
+						receiving = 0; //Finish receiving and exit loop
 					break;
 			}
 			
-		} else { //Error handle
+		} else { //Handle error
 			perror("thread_receiveFile: Receiving music error, closing connection");
 			delete [] buffer;
 			buffer = nullptr;
@@ -563,8 +615,6 @@ void *thread_receiveFile(void* arguments){
     epoll_ctl(args -> epollfd, EPOLL_CTL_ADD, clientSocket, ee);  
     delete [] buffer;
 	buffer = nullptr;
-	//delete [] receivedName;
-	//receivedName = nullptr;
     pthread_exit(NULL);
     return NULL;
 }
