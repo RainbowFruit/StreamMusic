@@ -547,6 +547,10 @@ void *thread_receiveFile(void* arguments){
     }    
  	//Add socket back to epoll
     epoll_ctl(args -> epollfd, EPOLL_CTL_ADD, clientSocket, ee);  
+    delete [] buffer;
+	buffer = nullptr;
+	delete [] receivedName;
+	receivedName = nullptr;
     pthread_exit(NULL);
     return NULL;
 }
