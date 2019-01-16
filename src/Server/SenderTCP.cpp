@@ -394,6 +394,7 @@ void *thread_MusicToBytes(void* arguments){
     if (wavFile == nullptr)
     {
         fprintf(stderr, "Unable to open wave file: %s\n", filePath);
+		usleep(2000);
         return 0;
     }
     
