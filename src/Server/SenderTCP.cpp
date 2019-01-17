@@ -383,7 +383,7 @@ void *thread_MusicToBytes(void* arguments){
 	unsigned int* pCurrentMusic = args -> pCurrentMusic;
     /*************/
     
-    int debugSentBytes = 0; //Debug variable
+    //int debugSentBytes = 0; //Debug variable
     
 	//Thread local variables
 	int sentBytes; //Amount of sent bytes by write()
@@ -403,7 +403,7 @@ void *thread_MusicToBytes(void* arguments){
     if (bytesRead > 0)
     {
     
-		auto startTime = get_time::now(); //Debug variable  
+		//auto startTime = get_time::now(); //Debug variable  
     
         int8_t* buffer = new int8_t[PACKET_SIZE];
         
@@ -439,7 +439,7 @@ void *thread_MusicToBytes(void* arguments){
             auto endTime = get_time::now();
             cout << "sentBytes: " << debugSentBytes << " " << chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000 << endl;
             cout << "Bytes per second: " << debugSentBytes*1.0/(chrono::duration_cast<ns>(endTime - startTime).count()*1.0 / 1000000000) << " / 176375" << endl;
-            /*************/
+            **************/
             
             //Delay
 			usleep(700);
