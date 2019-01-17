@@ -271,10 +271,11 @@ void *thread_Listen(void* arguments){
 
 	//Listen for commands
 	while(epoll_wait(epollfd, ee, 1, -1)){
-		if((receivedBytes = read(ee->data.fd, buffer, PACKET_SIZE)) < 0){
+		if((receivedBytes = read(ee->data.fd, buffer, PACKET_SIZE)) < 0 || (int)*(buffer) == 0){
 			//Handle error
 			perror("thread_Listen read error");	
-    		cout << "Closing socket: " << errno << endl;
+    		cout << "Closing socket number: " << ee->data.fd << " error: " << errno << endl;
+    		epoll_ctl(epollfd, EPOLL_CTL_DEL, ee->data.fd, ee);
 			close(ee->data.fd);
 			deleteFromVector(pClientSockets, ee->data.fd);
 			
@@ -375,12 +376,16 @@ void *thread_ReceiveConnections(void* arguments){
 //Convert music to byte array and send it to all client sockets
 void *thread_MusicToBytes(void* arguments){
 
+	cout << "thread_MusicToBytes: Thread started" << endl;
+
 	/*************/
 	//Variables shared between threads
 	struct arg_struct *args = (struct arg_struct *)arguments;
     vector<int>* pClientSockets = args -> pClientSockets;
     bool* pCanThreadRun = &(args -> isMusicThreadRunning);
 	unsigned int* pCurrentMusic = args -> pCurrentMusic;
+	int epollfd = args -> epollfd;
+	epoll_event *ee = args -> ee;
     /*************/
     
     //int debugSentBytes = 0; //Debug variable
@@ -419,7 +424,7 @@ void *thread_MusicToBytes(void* arguments){
             		cout << "thread_MusicToBytes: Thread aborted" << endl;
 	           		delete [] buffer;
         			buffer = nullptr;
-	           		fclose(wavFile);
+	           		//fclose(wavFile);
 					pthread_exit(NULL);
 					return NULL;		           
 	           } 
@@ -427,7 +432,9 @@ void *thread_MusicToBytes(void* arguments){
 	           if((sentBytes = write((*pClientSockets)[i], buffer, bytesRead + 1)) < 0){
 	            	//Handle error
 	            	perror("thread_MusicToBytes: Write error");
-            		cout << "Deleting socket, errno: " << errno << endl;
+    				cout << "Closing socket number: " << (*pClientSockets)[i] << " error: " << errno << endl;
+            		epoll_ctl(epollfd, EPOLL_CTL_DEL, (*pClientSockets)[i], ee);
+					close((*pClientSockets)[i]);
             		(*pClientSockets).erase((*pClientSockets).begin() + i);
 	            }
 	           		
@@ -442,7 +449,7 @@ void *thread_MusicToBytes(void* arguments){
             **************/
             
             //Delay
-			usleep(700);
+			usleep(1500);
         }
         delete [] buffer;
         buffer = nullptr;
