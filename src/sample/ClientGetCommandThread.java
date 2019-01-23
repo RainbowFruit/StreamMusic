@@ -6,7 +6,7 @@ import java.util.Scanner;
 public class ClientGetCommandThread extends Thread {
 
     private Socket socketToServer = null;
-    int sizeOfMusicData = 312;
+    int sizeOfMusicData = 100;
     byte[] packet = new byte[sizeOfMusicData + 1];
     Scanner in = new Scanner(System.in);
 	int command = 0;
@@ -21,11 +21,11 @@ public class ClientGetCommandThread extends Thread {
 			for(int i = 0; i < packet.length; i++){
 				packet[i] = 0;
 			}
-			
+
 			//Send 100
 			packet[0] = 100;
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
-			
+
 			//Wait for 105
 			while(command != 105){
 				try {
@@ -36,7 +36,7 @@ public class ClientGetCommandThread extends Thread {
 					e.printStackTrace();
 				}
 			}
-			
+
 			//Send 110
 			System.out.println("Podaj nazwe pliku: ");
 			in.nextLine();
@@ -46,15 +46,15 @@ public class ClientGetCommandThread extends Thread {
 				packet[i] = bytename[i];
 			packet[0] = 110;
 			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
-			
+
 			//Send 115 - music data
 			Thread UploadMusicToServer = new ClientSendingMusicThread(socketToServer, name);
 			UploadMusicToServer.start();
 			UploadMusicToServer.join();
-			
+
 			//Send 119 - Finish
-			packet[0] = 119;
-			socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);	
+			//packet[0] = 119;
+			//socketToServer.getOutputStream().write(packet, 0, sizeOfMusicData + 1);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return;

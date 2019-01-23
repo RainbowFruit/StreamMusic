@@ -10,6 +10,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -102,28 +103,35 @@ public class Controller {
     void send(byte command){
         try {
             StaticFields.socket.getOutputStream().write(command);
+            System.out.println("After sending");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     void updatelistView(List<String> musicNames){
-        listView.getSelectionModel().clearSelection();
-        listView.getItems().clear();
-        for(int i = 0; i < musicNames.size(); i++){
-            listView.getItems().add(i, (i+1) + " " + musicNames.get(i));
-        }
+        Platform.runLater(() -> {
+            listView.getSelectionModel().clearSelection();
+            listView.getItems().clear();
+            for(int i = 0; i < musicNames.size(); i++){
+                listView.getItems().add(i, (i+1) + " " + musicNames.get(i));
+            }
+        });
     }
 
     void updatetextView(String message){
-        textFieldTitle.setText(message);
+        Platform.runLater(()-> textFieldTitle.setText(message));
     }
 
     @FXML
     void sendMusic(ActionEvent event){
         StaticFields.musicTitleToSend = textFieldTitle.getText();
+        File file = new File(StaticFields.musicTitleToSend);
         //Thread SendingMusicThread = new ClientSendingMusicThread(StaticFields.socket, StaticFields.musicTitleToSend);
         //SendingMusicThread.start();
-        send((byte)100);
+        if(file.exists())
+            send((byte)100);
+        else
+            updatetextView("Failed to open file");
     }
 }

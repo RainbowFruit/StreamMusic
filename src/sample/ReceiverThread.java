@@ -27,6 +27,7 @@ public class ReceiverThread extends Thread {
             int port = 50005; //Port of connection
             //String host = "127.0.0.1";
             //String host = "192.168.0.101";
+            //String host = "10.160.38.207";
 
 
             Thread getCommandThread = null;
@@ -65,7 +66,7 @@ public class ReceiverThread extends Thread {
                 DataOutputStream outToClient = new DataOutputStream(StaticFields.socket.getOutputStream());
 
                 int receivedBytes; //Amount of bytes in packet
-                int sizeOfMusicData = 312;
+                int sizeOfMusicData = 100;
                 byte[] buffer = new byte[sizeOfMusicData + 1]; //Received music bytes from server
                 byte[] musicBuffer = new byte[sizeOfMusicData];
                 int totalReceivedBytes = 0;
@@ -77,34 +78,41 @@ public class ReceiverThread extends Thread {
                     long endTime;
                     try {
                         while ((receivedBytes = inFromClient.read(buffer)) > 0) {
+                            if (receivedBytes != (sizeOfMusicData + 1))
+                            {
+                                inFromClient.read(buffer, 0, sizeOfMusicData + 1 - receivedBytes);
+                            } else
+                                {
 
-                            //// Debug info
-                            endTime = System.nanoTime();
-                            totalReceivedBytes += receivedBytes;
-                            totalReceivedPackets++;
-                            System.out.println("Total length: " + totalReceivedBytes);
-                            System.out.println("Bytes per second: " + totalReceivedBytes/((endTime - startTime) / 1000000000.0f) + " / 176375");
-                            System.out.println("Total Received Packets: " + totalReceivedPackets);
-                            System.out.println("Elapsed time: " + (endTime - startTime) / 1000000000.0f);
-                            System.out.println("Answer: " + buffer[0]);
-                            ////
+                                //// Debug info
+                                endTime = System.nanoTime();
+                                totalReceivedBytes += receivedBytes;
+                                totalReceivedPackets++;
+                                System.out.println("Total length: " + totalReceivedBytes);
+                                System.out.println("Bytes per second: " + totalReceivedBytes / ((endTime - startTime) / 1000000000.0f) + " / 176375");
+                                System.out.println("Total Received Packets: " + totalReceivedPackets);
+                                System.out.println("Elapsed time: " + (endTime - startTime) / 1000000000.0f);
+                                if(buffer[0] != -128)
+                                    System.out.println("Received bytes: " + receivedBytes + " Answer: " + buffer[0]);
+                                ////
 
-                            if(buffer[0] == -128){
-                                System.arraycopy(buffer, 1, musicBuffer, 0, sizeOfMusicData);
-                                toSpeaker(musicBuffer, sourceDataLine);
-                            } else if (buffer[0] == 105) {
-                                SendingMusicThread = new ClientSendingMusicThread(StaticFields.socket, StaticFields.musicTitleToSend);
-                                SendingMusicThread.start();
-                            } else if (buffer[0] == 124) {
-                                //Clear queue
-                                musicNames.clear();
-                            } else if (buffer[0] == 125) {
-                                //Add to queue
-                                musicNames.add(getMusicName(buffer));
-                            } else if (buffer[0] == 126) {
-                                //Print queue
-                                printList(musicNames);
-                                StaticFields.myController.updatelistView(musicNames);
+                                if (buffer[0] == -128) {
+                                    System.arraycopy(buffer, 1, musicBuffer, 0, sizeOfMusicData);
+                                    toSpeaker(musicBuffer, sourceDataLine);
+                                } else if (buffer[0] == 105) {
+                                    SendingMusicThread = new ClientSendingMusicThread(StaticFields.socket, StaticFields.musicTitleToSend);
+                                    SendingMusicThread.start();
+                                } else if (buffer[0] == 124) {
+                                    //Clear queue
+                                    musicNames.clear();
+                                } else if (buffer[0] == 125) {
+                                    //Add to queue
+                                    musicNames.add(getMusicName(buffer));
+                                } else if (buffer[0] == 126) {
+                                    //Print queue
+                                    printList(musicNames);
+                                    StaticFields.myController.updatelistView(musicNames);
+                                }
                             }
                         }
                     } catch (Exception e){

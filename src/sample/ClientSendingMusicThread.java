@@ -1,13 +1,17 @@
 package sample;
 
+import javafx.application.Platform;
+
 import java.io.IOException;
 import java.net.Socket;
+import java.sql.Time;
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 public class ClientSendingMusicThread extends Thread {
 
-    private int sizeOfMusicData = 312;
+    private int sizeOfMusicData = 100;
     private int sizeOfBuffer = sizeOfMusicData + 1; //One byte for command
     private byte answer = -128;
     private byte[] musicBuffer = new byte[sizeOfMusicData];
@@ -33,7 +37,7 @@ public class ClientSendingMusicThread extends Thread {
 			sound = MusicToArray.convert(title);
 		} catch (Exception e){
         	System.out.println("Failed to open file");
-        	StaticFields.myController.updatetextView("Failed to open file");
+			Platform.runLater(()-> StaticFields.myController.updatetextView("Failed to open file"));
 			buffer[0] = 119;
 			try {
 				socketToServer.getOutputStream().write(buffer, 0, sizeOfBuffer);
@@ -47,7 +51,7 @@ public class ClientSendingMusicThread extends Thread {
 		String name = in.nextLine();
 		byte[] bytename = name.getBytes();*/
         byte[] bytename = title.getBytes();
-		for(int i = 1; i <= bytename.length; i++)
+		for(int i = 1; i <= bytename.length-4; i++)
 			buffer[i] = bytename[i-1];
 		buffer[0] = 110;
 		try {
@@ -58,6 +62,7 @@ public class ClientSendingMusicThread extends Thread {
 			
 		int wroteBytes = 0;
 		int sentPackets = 0;
+		int mod = 0;
 		try {
 		    for (int i = 0; i < sound.length; i++) {
 		        musicBuffer[i % sizeOfMusicData] = sound[i];
@@ -71,7 +76,8 @@ public class ClientSendingMusicThread extends Thread {
 	                sentPackets++;
 	                if(totalSendBytes % 10 == 0)
 	                	System.out.println("Sent " + totalSendBytes + " bytes");
-	                //TimeUnit.NANOSECONDS.sleep(1);
+
+					TimeUnit.NANOSECONDS.sleep(1);
 		        }
 		    }
 			//Finished uploading to server
