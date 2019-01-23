@@ -65,7 +65,7 @@ void *thread_MusicToBytes(void* args);
 void *thread_sendQueue(void* arguments);
 void *thread_receiveFile(void* args);
 
-const uint16_t MUSIC_SIZE = 312;
+const uint16_t MUSIC_SIZE = 100;
 const uint16_t PACKET_SIZE = MUSIC_SIZE + 1;
 
 /*Commands:
@@ -113,7 +113,8 @@ int main(int argc, char ** argv){
 	
 	//musicName init
 	vector<const char*> musicNames;
-	musicNames.push_back("Strefa komfortu.wav");
+	//musicNames.push_back("Strefa komfortu.wav");
+	musicNames.push_back("nowy.wav"); 
 	musicNames.push_back("Russia.wav"); 
 	musicNames.push_back("Good Life.wav"); 
 	musicNames.push_back("Must Have Been.wav"); 
@@ -429,7 +430,7 @@ void *thread_MusicToBytes(void* arguments){
 					return NULL;		           
 	           } 
    			   //Send music data
-	           if((sentBytes = write((*pClientSockets)[i], buffer, bytesRead + 1)) < 0){
+	           if((sentBytes = write((*pClientSockets)[i], buffer, PACKET_SIZE)) < 0){
 	            	//Handle error
 	            	perror("thread_MusicToBytes: Write error");
     				cout << "Closing socket number: " << (*pClientSockets)[i] << " error: " << errno << endl;
@@ -437,6 +438,7 @@ void *thread_MusicToBytes(void* arguments){
 					close((*pClientSockets)[i]);
             		(*pClientSockets).erase((*pClientSockets).begin() + i);
 	            }
+		//cout << sentBytes << endl;
 	           		
             }
 
@@ -449,7 +451,7 @@ void *thread_MusicToBytes(void* arguments){
             **************/
             
             //Delay
-			usleep(1500);
+			usleep(400);
         }
         delete [] buffer;
         buffer = nullptr;
@@ -562,6 +564,10 @@ void *thread_receiveFile(void* arguments){
     while(receiving) {
     	//Listen at client until he sends stop signal
 		if((bytesRead = read(clientSocket, buffer, PACKET_SIZE)) > 0){ //TODO: Add timeout
+			if(bytesRead != PACKET_SIZE){
+				read(clientSocket, buffer, PACKET_SIZE- bytesRead);
+			}
+			else{
 			command = (int)*(buffer); //Command is at first byte
 			int8_t* musicBuffer = subarray(buffer); //Make pure music buffer without command byte
 			switch (command){
@@ -609,7 +615,7 @@ void *thread_receiveFile(void* arguments){
 						receiving = 0; //Finish receiving and exit loop
 					break;
 			}
-			
+			}
 		} else { //Handle error
 			perror("thread_receiveFile: Receiving music error, closing connection");
 			delete [] buffer;
@@ -626,3 +632,4 @@ void *thread_receiveFile(void* arguments){
     pthread_exit(NULL);
     return NULL;
 }
+
