@@ -17,8 +17,8 @@ public class MainActivity extends AppCompatActivity {
     //String host = "192.168.0.25";
     Socket socket;
     int port = 50005;
-    byte[] packet = new byte[313];
-    byte[] musicBuffer = new byte[312];
+    byte[] packet = new byte[101];
+    byte[] musicBuffer = new byte[100];
     BufferedInputStream in;
     boolean canRun = false;
 
